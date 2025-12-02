@@ -75,6 +75,10 @@ const routes = [
     component: () => import('@/components/reservasComponent.vue'),
     meta: { requiresAuth: true }
   }
+  {
+    path: '/mensaje',
+    component: () => import('../components/conexionSB.vue')
+  }
 ]
 
 const router = createRouter({

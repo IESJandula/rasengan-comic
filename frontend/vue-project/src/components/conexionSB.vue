@@ -6,7 +6,7 @@ const mensaje = ref("Cargando...")
 
 onMounted(async () => {
   try {
-    const res = await api.get("/mensaje") // 👈 ya no pones el URL completo
+    const res = await api.get("/hola") // 👈 ya no pones el URL completo
     mensaje.value = res.data
   } catch (e) {
     mensaje.value = "Error al conectar"
