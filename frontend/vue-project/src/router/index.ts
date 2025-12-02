@@ -74,7 +74,7 @@ const routes = [
     name: 'Reservas',
     component: () => import('@/components/reservasComponent.vue'),
     meta: { requiresAuth: true }
-  }
+  },
   {
     path: '/mensaje',
     component: () => import('../components/conexionSB.vue')
