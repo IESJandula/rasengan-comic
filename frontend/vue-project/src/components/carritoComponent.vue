@@ -91,9 +91,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
 
 interface CartItem {
   id: number

@@ -257,7 +257,7 @@ const handleRegister = async () => {
   try {
     await new Promise((resolve) => setTimeout(resolve, 1500))
 
-    if (authStore.register(fullname.value, email.value, password.value)) {
+    if (await authStore.register(fullname.value, email.value, password.value)) {
       successMessage.value = '¡Cuenta creada exitosamente! Redirigiendo...'
       setTimeout(() => {
         router.push('/')
@@ -265,7 +265,7 @@ const handleRegister = async () => {
     } else {
       generalError.value = 'Este email ya está registrado'
     }
-  } catch (err) {
+  } catch {
     generalError.value = 'Error al crear la cuenta. Intenta nuevamente.'
   } finally {
     loading.value = false

@@ -21,18 +21,19 @@
 
               <!-- Eventos del día -->
               <div class="events-list">
-                <div
-                  v-if="day.events.length > 0"
-                  v-for="event in day.events"
-                  :key="event.id"
-                  class="event-item"
-                >
-                  <div class="event-time">{{ event.time }}</div>
-                  <div class="event-info">
-                    <h4 class="event-name">{{ event.name }}</h4>
-                    <p class="event-description">{{ event.description }}</p>
+                <template v-if="day.events.length > 0">
+                  <div
+                    v-for="event in day.events"
+                    :key="event.id"
+                    class="event-item"
+                  >
+                    <div class="event-time">{{ event.time }}</div>
+                    <div class="event-info">
+                      <h4 class="event-name">{{ event.name }}</h4>
+                      <p class="event-description">{{ event.description }}</p>
+                    </div>
                   </div>
-                </div>
+                </template>
                 <div v-else class="no-events">Sin eventos</div>
               </div>
             </div>

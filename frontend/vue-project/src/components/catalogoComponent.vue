@@ -958,7 +958,7 @@ const onCategoryChange = (category: string) => {
 }
 
 const filteredProducts = computed(() => {
-  let result = products.filter((product) => {
+  const result = products.filter((product) => {
     const categoryMatch = 
       selectedCategories.value.length === 0 || 
       selectedCategories.value.includes(product.category)

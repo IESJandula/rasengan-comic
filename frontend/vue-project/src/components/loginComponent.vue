@@ -93,10 +93,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/authStore';
+// authStore not used here, using firebase auth directly
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/firebase";
+
 
 const router = useRouter();
-const authStore = useAuthStore();
 
 const email = ref('');
 const password = ref('');
@@ -112,29 +114,39 @@ const handleLogin = async () => {
   try {
     if (!email.value || !password.value) {
       error.value = 'Por favor completa todos los campos';
-      loading.value = false;
       return;
     }
 
-    if (!email.value.includes('@')) {
-      error.value = 'Email inválido';
-      loading.value = false;
-      return;
-    }
+    await signInWithEmailAndPassword(
+      auth,
+      email.value,
+      password.value
+    );
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    // 🔐 Usuario autenticado correctamente
+    router.push('/');
 
-    if (authStore.login(email.value, password.value)) {
-      router.push('/');
-    } else {
-      error.value = 'Email o contraseña incorrectos';
+  } catch (caught) {
+    type AuthError = { code?: string }
+    const err = caught as AuthError
+    switch (err.code) {
+      case 'auth/user-not-found':
+        error.value = 'El usuario no existe'
+        break
+      case 'auth/wrong-password':
+        error.value = 'Contraseña incorrecta'
+        break
+      case 'auth/invalid-email':
+        error.value = 'Email inválido'
+        break
+      default:
+        error.value = 'Error al iniciar sesión'
     }
-  } catch (err) {
-    error.value = 'Error al iniciar sesión. Intenta nuevamente.';
   } finally {
     loading.value = false;
   }
 };
+
 
 const goToRegister = () => {
   router.push('/registro');

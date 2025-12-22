@@ -140,7 +140,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 
 interface Producto {
   nombre: string
@@ -161,7 +160,7 @@ interface Reserva {
   notas?: string
 }
 
-const router = useRouter()
+// router not needed here
 const loading = ref(false)
 const activeFilter = ref('todas')
 
@@ -306,18 +305,7 @@ const verDetalles = (reserva: Reserva): void => {
   // Aquí podrías abrir un modal o navegar a una página de detalles
 }
 
-const recogerProducto = (reserva: Reserva): void => {
-  if (confirm(`¿Confirmas que has recogido "${reserva.producto.nombre}"?`)) {
-    reserva.estado = 'recogido'
-    console.log('Producto marcado como recogido:', reserva.id)
-    alert('¡Producto marcado como recogido! Gracias por tu compra 🎉')
-  }
-}
-
-const extenderReserva = (reserva: Reserva): void => {
-  console.log('Extender reserva:', reserva.id)
-  alert('Plazo de reserva extendido por 7 días adicionales')
-}
+// recogerProducto and extenderReserva removed (unused)
 
 const cancelarReserva = (reserva: Reserva): void => {
   if (confirm(`¿Estás seguro de que quieres cancelar la reserva de "${reserva.producto.nombre}"?`)) {

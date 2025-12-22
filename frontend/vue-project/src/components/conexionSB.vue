@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import api from '../api/axios'  // 👈 Importas tu Axios configurado
 
@@ -8,7 +8,7 @@ onMounted(async () => {
   try {
     const res = await api.get("/hola") // 👈 ya no pones el URL completo
     mensaje.value = res.data
-  } catch (e) {
+  } catch {
     mensaje.value = "Error al conectar"
   }
 })
