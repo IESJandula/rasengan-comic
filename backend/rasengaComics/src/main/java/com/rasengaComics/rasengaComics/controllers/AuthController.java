@@ -39,13 +39,22 @@ public class AuthController {
                 u.setNombre(decoded.getName() != null ? decoded.getName() : decoded.getEmail());
                 u.setRol("USER");
                 usuarioRepository.save(u);
-                return ResponseEntity.ok(u);
+                return ResponseEntity.ok(toResponse(u));
             } else {
-                return ResponseEntity.ok(opt.get());
+                return ResponseEntity.ok(toResponse(opt.get()));
             }
         } catch (FirebaseAuthException e) {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid token"));
         }
+    }
+
+    private com.rasengaComics.rasengaComics.dto.response.UsuarioResponse toResponse(Usuario u) {
+        com.rasengaComics.rasengaComics.dto.response.UsuarioResponse r = new com.rasengaComics.rasengaComics.dto.response.UsuarioResponse();
+        r.setUid(u.getUid());
+        r.setEmail(u.getEmail());
+        r.setNombre(u.getNombre());
+        r.setRol(u.getRol());
+        return r;
     }
 }
 

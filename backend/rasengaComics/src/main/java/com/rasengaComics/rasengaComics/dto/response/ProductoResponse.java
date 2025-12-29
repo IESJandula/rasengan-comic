@@ -7,6 +7,8 @@ public class ProductoResponse {
     private String descripcion;
     private Double precio;
     private Integer stock;
+    private Long categoriaId;
+    private Long subcategoriaId;
 
     public ProductoResponse() {}
 
@@ -24,5 +26,11 @@ public class ProductoResponse {
 
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
+
+    public Long getCategoriaId() { return categoriaId; }
+    public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }
+
+    public Long getSubcategoriaId() { return subcategoriaId; }
+    public void setSubcategoriaId(Long subcategoriaId) { this.subcategoriaId = subcategoriaId; }
 }
 

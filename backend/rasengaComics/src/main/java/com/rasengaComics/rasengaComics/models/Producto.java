@@ -11,6 +11,8 @@ public class Producto {
     private Long id;
 
     private String nombre;
+    private Long categoriaId;
+    private Long subcategoriaId;
     @Column(length = 2000)
     private String descripcion;
     private Double precio;
@@ -24,6 +26,12 @@ public class Producto {
         this.precio = precio;
         this.stock = stock;
     }
+
+    public Long getCategoriaId() { return categoriaId; }
+    public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }
+
+    public Long getSubcategoriaId() { return subcategoriaId; }
+    public void setSubcategoriaId(Long subcategoriaId) { this.subcategoriaId = subcategoriaId; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
