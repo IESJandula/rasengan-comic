@@ -16,6 +16,7 @@ public class Producto {
     @Column(length = 2000)
     private String descripcion;
     private Double precio;
+    private String imagenUrl;
     private Integer stock;
 
     public Producto() {}
@@ -44,6 +45,9 @@ public class Producto {
 
     public Double getPrecio() { return precio; }
     public void setPrecio(Double precio) { this.precio = precio; }
+
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
 
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }

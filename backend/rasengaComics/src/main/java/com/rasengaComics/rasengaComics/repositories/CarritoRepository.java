@@ -1,6 +1,14 @@
 package com.rasengaComics.rasengaComics.repositories;
 
-public interface CarritoRepository {
-    // placeholder
+import com.rasengaComics.rasengaComics.models.Carrito;
+import com.rasengaComics.rasengaComics.models.Usuario;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface CarritoRepository extends JpaRepository<Carrito, Long> {
+    Optional<Carrito> findByUsuario(Usuario usuario);
 }
 

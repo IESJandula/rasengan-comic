@@ -9,8 +9,10 @@ public class PedidoResponse {
     private String usuarioUid;
     private String estado;
     private Double total;
+    private LocalDateTime fechaPedido;
     private LocalDateTime fechaCreacion;
     private List<Item> items;
+    private Integer cantidadDetalles;
 
     public PedidoResponse() {}
 
@@ -26,11 +28,17 @@ public class PedidoResponse {
     public Double getTotal() { return total; }
     public void setTotal(Double total) { this.total = total; }
 
+    public LocalDateTime getFechaPedido() { return fechaPedido; }
+    public void setFechaPedido(LocalDateTime fechaPedido) { this.fechaPedido = fechaPedido; }
+
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 
     public List<Item> getItems() { return items; }
     public void setItems(List<Item> items) { this.items = items; }
+
+    public Integer getCantidadDetalles() { return cantidadDetalles; }
+    public void setCantidadDetalles(Integer cantidadDetalles) { this.cantidadDetalles = cantidadDetalles; }
 
     public static class Item {
         private Long productoId;

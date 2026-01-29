@@ -7,6 +7,8 @@ public class CarritoResponse {
     private Long id;
     private String usuarioUid;
     private List<CarritoItem> items;
+    private Double total;
+    private Integer cantidadItems;
 
     public CarritoResponse() {}
 
@@ -18,6 +20,12 @@ public class CarritoResponse {
 
     public List<CarritoItem> getItems() { return items; }
     public void setItems(List<CarritoItem> items) { this.items = items; }
+
+    public Double getTotal() { return total; }
+    public void setTotal(Double total) { this.total = total; }
+
+    public Integer getCantidadItems() { return cantidadItems; }
+    public void setCantidadItems(Integer cantidadItems) { this.cantidadItems = cantidadItems; }
 
     public static class CarritoItem {
         private Long productoId;
