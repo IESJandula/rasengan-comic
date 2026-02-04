@@ -8,6 +8,7 @@ interface AuthUser {
   email: string | null
   name?: string
   avatar?: string
+  uid?: string
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -21,7 +22,8 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await signInWithEmailAndPassword(auth, email, password)
       user.value = {
         email: res.user.email,
-        name: res.user.email?.split('@')[0] ?? ''
+        name: res.user.email?.split('@')[0] ?? '',
+        uid: res.user.uid
       }
       isAuthenticated.value = true
       return true
@@ -47,7 +49,8 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await createUserWithEmailAndPassword(auth, email, password)
       user.value = {
         email: res.user.email,
-        name: fullname ?? (res.user.email?.split('@')[0] ?? '')
+        name: fullname ?? (res.user.email?.split('@')[0] ?? ''),
+        uid: res.user.uid
       }
       isAuthenticated.value = true
       return true
@@ -64,13 +67,19 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Mantener sesión al refrescar
   const initFirebase = () => {
-    onAuthStateChanged(auth, (firebaseUser: User | null) => {
+    onAuthStateChanged(auth, async (firebaseUser: User | null) => {
       if (firebaseUser) {
         user.value = {
           email: firebaseUser.email,
-          name: firebaseUser.email?.split('@')[0] ?? ''
+          name: firebaseUser.email?.split('@')[0] ?? '',
+          uid: firebaseUser.uid
         }
         isAuthenticated.value = true
+        
+        // Sincronizar carrito cuando el usuario se loguea
+        const { useCartStore } = await import('./cartStore')
+        const cartStore = useCartStore()
+        await cartStore.syncCartWithServer()
       } else {
         user.value = null
         isAuthenticated.value = false

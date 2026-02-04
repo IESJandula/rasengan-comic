@@ -42,28 +42,28 @@
 
     <!-- Secciones -->
     <div class="content-wrapper">
-      <!-- Productos Favoritos -->
+      <!-- Productos Más Comprados -->
       <section class="section">
         <h2 class="section-title">
-          ⭐ PRODUCTOS FAVORITOS
+          🏆 PRODUCTOS MÁS COMPRADOS
         </h2>
         <div class="products-grid">
           <div
-            v-for="item in productos"
+            v-for="item in productosMasComprados"
             :key="item.id"
             class="product-card"
             @click="viewProduct(item.id)"
             style="cursor: pointer;"
           >
             <img
-              :src="item.imagen"
-              :alt="item.nombre"
+              :src="item.image"
+              :alt="item.name"
               class="product-image"
             />
             <div class="product-info">
-              <h3 class="product-name">{{ item.nombre }}</h3>
-              <p class="product-category">{{ item.categoria }}</p>
-              <p class="product-price">{{ item.precio }}</p>
+              <h3 class="product-name">{{ item.name }}</h3>
+              <p class="product-category">{{ item.category }}</p>
+              <p class="product-price">{{ formatPrice(item.price) }}</p>
             </div>
           </div>
         </div>
@@ -254,6 +254,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
+import api from '@/api/axios'
 
 const router = useRouter();
 
@@ -275,6 +276,56 @@ const slides = [
   banner2,
   banner3,
 ];
+
+// Productos más comprados (cargados desde API)
+const productosMasComprados = ref<any[]>([])
+
+// Función para formatear precio
+const formatPrice = (price: number): string => {
+  return `${price.toFixed(2)}€`
+}
+
+// Cargar productos más comprados desde la API
+const loadProductosMasComprados = async () => {
+  try {
+    const response = await api.get('/api/products')
+    // Tomar los primeros 3 productos
+    productosMasComprados.value = response.data.slice(0, 3).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      category: p.category,
+      price: p.price,
+      image: p.image || 'https://via.placeholder.com/200'
+    }))
+    console.log('✅ Productos más comprados cargados:', productosMasComprados.value.length)
+  } catch (err) {
+    console.error('❌ Error al cargar productos:', err)
+    // Si falla, mostrar los datos por defecto
+    productosMasComprados.value = [
+      {
+        id: 1,
+        name: 'One Piece Vol. 100',
+        category: 'Manga',
+        price: 12.99,
+        image: getImageUrl('one-piece-vol100.jpg')
+      },
+      {
+        id: 2,
+        name: 'Magic Commander',
+        category: 'TCG',
+        price: 159.99,
+        image: getImageUrl('magicComander.jpg')
+      },
+      {
+        id: 3,
+        name: 'Funko Goku',
+        category: 'Figuras',
+        price: 14.99,
+        image: getImageUrl('funko-goku.jpg')
+      }
+    ]
+  }
+}
 
 // Productos favoritos
 const productos = [
@@ -475,7 +526,8 @@ const viewProduct = (productId: number) => {
 };
 
 onMounted(() => {
-  startAutoSlide();
+  startAutoSlide()
+  loadProductosMasComprados()
 });
 
 onBeforeUnmount(() => {

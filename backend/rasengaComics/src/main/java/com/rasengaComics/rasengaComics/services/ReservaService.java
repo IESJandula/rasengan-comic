@@ -36,6 +36,10 @@ public class ReservaService {
         return reservaRepository.findByUsuario(usuario);
     }
 
+    public List<Reserva> listarPorUsuarioEmail(String email) {
+        return reservaRepository.findByUsuarioEmail(email);
+    }
+
     public Reserva actualizarEstado(Long id, String nuevoEstado) {
         Optional<Reserva> opt = reservaRepository.findById(id);
         if (opt.isPresent()) {

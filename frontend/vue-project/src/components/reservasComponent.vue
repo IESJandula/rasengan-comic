@@ -80,6 +80,10 @@
               <span class="label">Disponible desde:</span>
               <span class="value availability">{{ formatDate(reserva.fechaDisponibilidad) }}</span>
             </div>
+            <div class="detail-item" v-if="reserva.estado === 'pendiente' && reserva.tiempoRestante">
+              <span class="label">⏱️ Tiempo restante:</span>
+              <span class="value timer">{{ reserva.tiempoRestante }}</span>
+            </div>
           </div>
 
           <!-- Nota de la reserva -->
@@ -139,7 +143,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import api from '@/api/axios'
+import { useAuthStore } from '@/stores/authStore'
+
+const authStore = useAuthStore()
 
 interface Producto {
   nombre: string
@@ -158,6 +166,7 @@ interface Reserva {
   fechaReserva: string
   fechaDisponibilidad?: string
   notas?: string
+  tiempoRestante?: string
 }
 
 // router not needed here
@@ -172,72 +181,198 @@ const filters = [
   { label: 'Canceladas', value: 'cancelada' }
 ]
 
-// Datos de ejemplo
-const reservas = ref<Reserva[]>([
-  {
-    id: 'RES2024001',
-    producto: {
-      nombre: 'One Piece Vol. 108',
-      categoria: 'Manga',
-      editorial: 'Planeta Cómic',
-      imagen: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400'
-    },
-    estado: 'disponible',
-    cantidad: 1,
-    precioUnitario: 8.50,
-    total: 8.50,
-    fechaReserva: '2025-10-15T10:30:00',
-    fechaDisponibilidad: '2025-10-28T09:00:00',
-    notas: 'Edición especial con póster'
-  },
-  {
-    id: 'RES2024002',
-    producto: {
-      nombre: 'Yu-Gi-Oh! 25th Anniversary Pack',
-      categoria: 'Trading Cards',
-      editorial: 'Konami',
-      imagen: 'https://images.unsplash.com/photo-1511882150382-421056c89033?w=400'
-    },
-    estado: 'pendiente',
-    cantidad: 3,
-    precioUnitario: 15.00,
-    total: 45.00,
-    fechaReserva: '2025-10-20T14:20:00',
-    fechaDisponibilidad: '2025-11-10T10:00:00',
-    notas: 'Esperando llegada del proveedor'
-  },
-  {
-    id: 'RES2024003',
-    producto: {
-      nombre: 'Chainsaw Man Vol. 15',
-      categoria: 'Manga',
-      editorial: 'Norma Editorial',
-      imagen: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=400'
-    },
-    estado: 'recogido',
-    cantidad: 1,
-    precioUnitario: 9.00,
-    total: 9.00,
-    fechaReserva: '2025-09-25T11:00:00',
-    fechaDisponibilidad: '2025-10-05T10:00:00'
-  },
-  {
-    id: 'RES2024004',
-    producto: {
-      nombre: 'Naruto Box Set Complete Series',
-      categoria: 'Box Set',
-      editorial: 'Planeta Cómic',
-      imagen: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400'
-    },
-    estado: 'pendiente',
-    cantidad: 1,
-    precioUnitario: 299.00,
-    total: 299.00,
-    fechaReserva: '2025-10-28T16:45:00',
-    fechaDisponibilidad: '2025-12-01T10:00:00',
-    notas: 'Edición limitada - Solo quedan 5 unidades'
+// Datos de reservas
+const reservas = ref<Reserva[]>([])
+
+// Cargar reservas desde la API
+const loadReservas = async () => {
+  loading.value = true
+  try {
+    // Obtener el email del usuario autenticado
+    const userEmail = authStore.user?.email
+    
+    if (!userEmail) {
+      console.warn('⚠️ Usuario no autenticado')
+      loadReservasEjemplo()
+      return
+    }
+
+    console.log('📋 Cargando reservas para usuario:', userEmail)
+    
+    // Intentar cargar por usuario específico
+    let response
+    try {
+      // Primero intentamos obtener reservas del usuario específico
+      response = await api.get('/reservas', {
+        params: {
+          email: userEmail
+        }
+      })
+    } catch (err) {
+      // Si la API no soporta parámetros, cargamos todas y filtramos
+      console.log('📌 Filtrando desde todas las reservas...')
+      response = await api.get('/reservas')
+    }
+    
+    console.log('📋 Datos de reservas desde API:', response.data)
+    
+    if (!response.data || response.data.length === 0) {
+      console.warn('⚠️ No hay reservas en la BD, mostrando datos de ejemplo')
+      loadReservasEjemplo()
+      return
+    }
+    
+    // Filtrar reservas del usuario actual
+    const reservasDelUsuario = Array.isArray(response.data) 
+      ? response.data.filter((r: any) => {
+          const resUserEmail = r.usuario?.email || r.email || ''
+          return resUserEmail.toLowerCase() === userEmail.toLowerCase()
+        })
+      : response.data.usuario?.email?.toLowerCase() === userEmail.toLowerCase() ? [response.data] : []
+    
+    if (reservasDelUsuario.length === 0) {
+      console.warn('⚠️ Este usuario no tiene reservas')
+      reservas.value = []
+      return
+    }
+    
+    reservas.value = reservasDelUsuario.map((r: any) => ({
+      id: String(r.id),
+      producto: {
+        nombre: r.evento?.nombre || 'Evento sin nombre',
+        categoria: 'Evento',
+        editorial: r.evento?.ubicacion || 'Sin ubicación',
+        imagen: r.evento?.imagenUrl || 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400'
+      },
+      estado: r.estado?.toLowerCase() || 'pendiente',
+      cantidad: r.personas || 1,
+      precioUnitario: 0,
+      total: 0,
+      fechaReserva: r.fechaReserva || new Date().toISOString(),
+      fechaDisponibilidad: r.fechaHora || r.fechaReserva || new Date().toISOString(),
+      notas: r.evento?.descripcion || '',
+      tiempoRestante: ''
+    }))
+    console.log('✅ Reservas cargadas:', reservas.value.length)
+    updateTimers()
+  } catch (err) {
+    console.error('❌ Error al cargar reservas:', err)
+    console.log('📌 Usuario no autenticado o error en API')
+    reservas.value = []
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// Función para cargar datos de ejemplo
+const loadReservasEjemplo = () => {
+  const ahora = new Date()
+  const mañana = new Date(ahora.getTime() + 24 * 60 * 60 * 1000)
+  const semana = new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000)
+  
+  reservas.value = [
+    {
+      id: '1',
+      producto: {
+        nombre: 'Torneo TCG Magic',
+        categoria: 'Evento',
+        editorial: 'Centro Cívico',
+        imagen: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400'
+      },
+      estado: 'pendiente',
+      cantidad: 2,
+      precioUnitario: 0,
+      total: 0,
+      fechaReserva: ahora.toISOString(),
+      fechaDisponibilidad: mañana.toISOString(),
+      notas: 'Trae tu mazo preferido',
+      tiempoRestante: ''
+    },
+    {
+      id: '2',
+      producto: {
+        nombre: 'Taller de Manga',
+        categoria: 'Evento',
+        editorial: 'Biblioteca Municipal',
+        imagen: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=400'
+      },
+      estado: 'disponible',
+      cantidad: 1,
+      precioUnitario: 0,
+      total: 0,
+      fechaReserva: ahora.toISOString(),
+      fechaDisponibilidad: ahora.toISOString(),
+      notas: 'Aprende técnicas de dibujo manga',
+      tiempoRestante: 'Disponible ahora'
+    },
+    {
+      id: '3',
+      producto: {
+        nombre: 'Lanzamiento One Piece Vol. 109',
+        categoria: 'Evento',
+        editorial: 'Librería Principal',
+        imagen: 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=400'
+      },
+      estado: 'pendiente',
+      cantidad: 1,
+      precioUnitario: 0,
+      total: 0,
+      fechaReserva: ahora.toISOString(),
+      fechaDisponibilidad: semana.toISOString(),
+      notas: 'Incluye firma del traductor',
+      tiempoRestante: ''
+    }
+  ]
+  console.log('✅ Datos de ejemplo cargados:', reservas.value.length)
+  updateTimers()
+}
+
+// Actualizar timers de disponibilidad
+const updateTimers = () => {
+  reservas.value.forEach(reserva => {
+    if (reserva.fechaDisponibilidad && reserva.estado === 'pendiente') {
+      const now = new Date().getTime()
+      const disponibilidadDate = new Date(reserva.fechaDisponibilidad).getTime()
+      const diferenciaMs = disponibilidadDate - now
+
+      if (diferenciaMs <= 0) {
+        reserva.tiempoRestante = 'Disponible ahora'
+      } else {
+        const dias = Math.floor(diferenciaMs / (1000 * 60 * 60 * 24))
+        const horas = Math.floor((diferenciaMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const minutos = Math.floor((diferenciaMs % (1000 * 60 * 60)) / (1000 * 60))
+
+        if (dias > 0) {
+          reserva.tiempoRestante = `${dias}d ${horas}h ${minutos}m`
+        } else if (horas > 0) {
+          reserva.tiempoRestante = `${horas}h ${minutos}m`
+        } else {
+          reserva.tiempoRestante = `${minutos}m`
+        }
+      }
+    }
+  })
+}
+
+// Timer para actualizar cada minuto
+let timerInterval: ReturnType<typeof setInterval> | null = null
+
+const startTimer = () => {
+  timerInterval = setInterval(() => {
+    updateTimers()
+  }, 60000) // Actualizar cada minuto
+}
+
+onMounted(() => {
+  loadReservas()
+  startTimer()
+})
+
+onBeforeUnmount(() => {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+  }
+})
 
 const filteredReservas = computed(() => {
   if (activeFilter.value === 'todas') {
@@ -546,6 +681,22 @@ const cancelarReserva = (reserva: Reserva): void => {
 
 .detail-item .value.availability {
   color: #059669;
+}
+
+.detail-item .value.timer {
+  color: #dc2626;
+  font-weight: bold;
+  font-size: 1rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .reserva-notas {

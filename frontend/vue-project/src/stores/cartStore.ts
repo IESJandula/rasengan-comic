@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import api from '@/api/axios'
+import { useAuthStore } from './authStore'
 
 export interface CartItem {
   id: number
@@ -10,8 +12,30 @@ export interface CartItem {
   image: string
 }
 
+const CART_STORAGE_KEY = 'rasengan_comic_cart'
+
+// Cargar carrito desde localStorage
+const loadCartFromStorage = (): CartItem[] => {
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch (error) {
+    console.error('Error al cargar carrito desde localStorage:', error)
+    return []
+  }
+}
+
+// Guardar carrito en localStorage
+const saveCartToStorage = (items: CartItem[]) => {
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+  } catch (error) {
+    console.error('Error al guardar carrito en localStorage:', error)
+  }
+}
+
 export const useCartStore = defineStore('cart', () => {
-  const items = ref<CartItem[]>([])
+  const items = ref<CartItem[]>(loadCartFromStorage())
 
   // Computed para obtener el total de items
   const totalItems = computed(() => {
@@ -54,6 +78,7 @@ export const useCartStore = defineStore('cart', () => {
         quantity
       })
     }
+    saveCartToStorage(items.value)
   }
 
   // Incrementar cantidad de un producto
@@ -61,6 +86,7 @@ export const useCartStore = defineStore('cart', () => {
     const item = items.value.find(i => i.id === itemId)
     if (item) {
       item.quantity++
+      saveCartToStorage(items.value)
     }
   }
 
@@ -69,17 +95,20 @@ export const useCartStore = defineStore('cart', () => {
     const item = items.value.find(i => i.id === itemId)
     if (item && item.quantity > 1) {
       item.quantity--
+      saveCartToStorage(items.value)
     }
   }
 
   // Remover un producto del carrito
   const removeItem = (itemId: number) => {
     items.value = items.value.filter(i => i.id !== itemId)
+    saveCartToStorage(items.value)
   }
 
   // Limpiar todo el carrito
   const clearCart = () => {
     items.value = []
+    saveCartToStorage(items.value)
   }
 
   // Verificar si un producto está en el carrito
@@ -91,6 +120,46 @@ export const useCartStore = defineStore('cart', () => {
   const getItemQuantity = (productId: number) => {
     const item = items.value.find(i => i.id === productId)
     return item ? item.quantity : 0
+  }
+
+  // Sincronizar carrito con el servidor cuando el usuario se loguea
+  const syncCartWithServer = async () => {
+    const authStore = useAuthStore()
+    
+    if (!authStore.user?.uid) {
+      console.log('📌 Usuario no autenticado, no se sincroniza carrito')
+      return
+    }
+
+    try {
+      console.log('🔄 Sincronizando carrito con servidor...')
+      
+      // Obtener carrito del servidor
+      const response = await api.get(`/carrito/${authStore.user.uid}`)
+      const serverCart = response.data
+      
+      if (serverCart && serverCart.cantidadItems > 0) {
+        // Si el servidor tiene items, los mostramos
+        console.log('✅ Carrito cargado desde servidor:', serverCart)
+        // Aquí se cargarían los items del servidor si la API retornara los items
+        // Por ahora, mantenemos el carrito local que se sincronizará después
+      } else {
+        // Si el servidor no tiene items, guardamos los locales
+        console.log('📌 Guardando carrito local en servidor...')
+        await api.post('/carrito', {
+          usuarioUid: authStore.user.uid,
+          items: items.value
+        })
+      }
+    } catch (err) {
+      console.warn('⚠️ No se pudo sincronizar carrito con servidor:', err)
+      // Si falla, solo mantenemos el carrito local
+    }
+  }
+
+  // Limpiar carrito local cuando el usuario se deslogea
+  const clearLocalCart = () => {
+    // No limpiamos aquí, solo limpiamos cuando se logea un usuario diferente
   }
 
   return {
@@ -106,6 +175,8 @@ export const useCartStore = defineStore('cart', () => {
     removeItem,
     clearCart,
     isInCart,
-    getItemQuantity
+    getItemQuantity,
+    syncCartWithServer,
+    clearLocalCart
   }
 })

@@ -167,9 +167,11 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { useCartStore } from '@/stores/cartStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const cartStore = useCartStore()
 
 const fullname = ref('')
 const email = ref('')
@@ -258,6 +260,9 @@ const handleRegister = async () => {
     await new Promise((resolve) => setTimeout(resolve, 1500))
 
     if (await authStore.register(fullname.value, email.value, password.value)) {
+      // Sincronizar carrito después del registro
+      await cartStore.syncCartWithServer()
+      
       successMessage.value = '¡Cuenta creada exitosamente! Redirigiendo...'
       setTimeout(() => {
         router.push('/')
