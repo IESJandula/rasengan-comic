@@ -20,24 +20,35 @@
     <main class="admin-main">
       <!-- Estadísticas -->
       <div v-if="activeTab === 'Estadísticas'" class="admin-section">
-        <h1>Panel de Estadísticas</h1>
+        <div class="stats-header">
+          <h1>📊 Panel de Estadísticas</h1>
+          <p class="stats-subtitle">Resumen general del sistema</p>
+        </div>
         
         <div class="stats-grid">
-          <div class="stat-card">
+          <div class="stat-card stat-card-productos">
+            <div class="stat-icon">📦</div>
             <h3>Productos</h3>
-            <p class="stat-number">{{ products.length }}</p>
+            <p class="stat-number">{{ estadisticas.totalProductos }}</p>
+            <p class="stat-label">Productos activos</p>
           </div>
-          <div class="stat-card">
+          <div class="stat-card stat-card-usuarios">
+            <div class="stat-icon">👥</div>
             <h3>Usuarios</h3>
-            <p class="stat-number">{{ users.length }}</p>
+            <p class="stat-number">{{ estadisticas.totalUsuarios }}</p>
+            <p class="stat-label">Usuarios registrados</p>
           </div>
-          <div class="stat-card">
+          <div class="stat-card stat-card-eventos">
+            <div class="stat-icon">🎉</div>
             <h3>Eventos</h3>
-            <p class="stat-number">{{ events.length }}</p>
+            <p class="stat-number">{{ estadisticas.totalEventos }}</p>
+            <p class="stat-label">Eventos programados</p>
           </div>
-          <div class="stat-card">
+          <div class="stat-card stat-card-reservas">
+            <div class="stat-icon">🔖</div>
             <h3>Reservas Activas</h3>
-            <p class="stat-number">{{ reservasActivas }}</p>
+            <p class="stat-number">{{ estadisticas.reservasActivas }}</p>
+            <p class="stat-label">Reservas pendientes</p>
           </div>
         </div>
       </div>
@@ -304,9 +315,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'vue-router'
+import api from '@/api/axios'
 
 interface Product {
   id: number
@@ -395,90 +407,7 @@ const reservasFilters = [
   { label: 'Canceladas', value: 'cancelada' }
 ]
 
-const reservasAdmin = ref<ReservaAdmin[]>([
-  {
-    id: 'RES2024001',
-    cliente: {
-      nombre: 'Juan Pérez',
-      email: 'juan@example.com',
-      telefono: '+34 612 345 678',
-      avatar: 'https://ui-avatars.com/api/?name=Juan+Perez&background=dc2626&color=fff'
-    },
-    producto: {
-      nombre: 'One Piece Vol. 108',
-      categoria: 'Manga',
-      imagen: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=200'
-    },
-    estado: 'disponible',
-    cantidad: 1,
-    precioUnitario: 8.50,
-    total: 8.50,
-    fechaReserva: '2025-10-15T10:30:00',
-    fechaDisponibilidad: '2025-10-28T09:00:00',
-    notas: 'Edición especial con póster'
-  },
-  {
-    id: 'RES2024002',
-    cliente: {
-      nombre: 'María García',
-      email: 'maria@example.com',
-      telefono: '+34 623 456 789',
-      avatar: 'https://ui-avatars.com/api/?name=Maria+Garcia&background=dc2626&color=fff'
-    },
-    producto: {
-      nombre: 'Yu-Gi-Oh! 25th Anniversary Pack',
-      categoria: 'Trading Cards',
-      imagen: 'https://images.unsplash.com/photo-1511882150382-421056c89033?w=200'
-    },
-    estado: 'pendiente',
-    cantidad: 3,
-    precioUnitario: 15.00,
-    total: 45.00,
-    fechaReserva: '2025-10-20T14:20:00',
-    fechaDisponibilidad: '2025-11-10T10:00:00',
-    notas: 'Llamar cuando llegue'
-  },
-  {
-    id: 'RES2024003',
-    cliente: {
-      nombre: 'Carlos Ruiz',
-      email: 'carlos@example.com',
-      telefono: '+34 634 567 890',
-      avatar: 'https://ui-avatars.com/api/?name=Carlos+Ruiz&background=dc2626&color=fff'
-    },
-    producto: {
-      nombre: 'Chainsaw Man Vol. 15',
-      categoria: 'Manga',
-      imagen: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=200'
-    },
-    estado: 'recogido',
-    cantidad: 1,
-    precioUnitario: 9.00,
-    total: 9.00,
-    fechaReserva: '2025-09-25T11:00:00',
-    fechaDisponibilidad: '2025-10-05T10:00:00'
-  },
-  {
-    id: 'RES2024004',
-    cliente: {
-      nombre: 'Ana Martínez',
-      email: 'ana@example.com',
-      telefono: '+34 645 678 901',
-      avatar: 'https://ui-avatars.com/api/?name=Ana+Martinez&background=dc2626&color=fff'
-    },
-    producto: {
-      nombre: 'Naruto Box Set Complete',
-      categoria: 'Box Set',
-      imagen: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200'
-    },
-    estado: 'pendiente',
-    cantidad: 1,
-    precioUnitario: 299.00,
-    total: 299.00,
-    fechaReserva: '2025-10-28T16:45:00',
-    fechaDisponibilidad: '2025-12-01T10:00:00'
-  }
-])
+const reservasAdmin = ref<ReservaAdmin[]>([])
 
 const filteredReservasAdmin = computed(() => {
   if (activeReservaFilter.value === 'todas') {
@@ -489,6 +418,114 @@ const filteredReservasAdmin = computed(() => {
 
 const reservasActivas = computed(() => {
   return reservasAdmin.value.filter(r => r.estado === 'pendiente' || r.estado === 'disponible').length
+})
+
+// Estadísticas desde la base de datos
+const estadisticas = ref({
+  totalProductos: 0,
+  totalUsuarios: 0,
+  totalEventos: 0,
+  reservasActivas: 0
+})
+
+const loadEstadisticas = async () => {
+  try {
+    const response = await api.get('/api/estadisticas')
+    estadisticas.value = response.data
+    console.log('✅ Estadísticas cargadas:', estadisticas.value)
+  } catch (err) {
+    console.error('❌ Error al cargar estadísticas:', err)
+  }
+}
+
+const loadProductos = async () => {
+  try {
+    const response = await api.get('/api/products')
+    products.value = response.data.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      category: p.category,
+      price: p.price,
+      discount: p.discount || 0,
+      description: p.description || '',
+      image: p.image || 'https://via.placeholder.com/100'
+    }))
+    console.log('✅ Productos cargados:', products.value.length)
+  } catch (err) {
+    console.error('❌ Error al cargar productos:', err)
+  }
+}
+
+const loadEventos = async () => {
+  try {
+    const response = await api.get('/eventos')
+    events.value = response.data.map((e: any) => ({
+      id: e.id,
+      name: e.nombre,
+      date: e.fecha ? new Date(e.fecha).toISOString().split('T')[0] : '',
+      time: e.fecha ? new Date(e.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '',
+      description: e.descripcion || '',
+      type: e.tipo || 'tournament'
+    }))
+    console.log('✅ Eventos cargados:', events.value.length)
+  } catch (err) {
+    console.error('❌ Error al cargar eventos:', err)
+  }
+}
+
+const loadUsuarios = async () => {
+  try {
+    const response = await api.get('/usuarios')
+    users.value = response.data.map((u: any) => ({
+      id: u.uid || u.id,
+      name: u.nombre || u.name,
+      email: u.email,
+      avatar: 'https://ui-avatars.com/api/?name=' + (u.nombre || u.name) + '&background=dc2626&color=fff',
+      joinDate: u.fechaCreacion ? new Date(u.fechaCreacion).toLocaleDateString('es-ES') : '2024-01-01'
+    }))
+    console.log('✅ Usuarios cargados:', users.value.length)
+  } catch (err) {
+    console.error('❌ Error al cargar usuarios:', err)
+  }
+}
+
+const loadReservas = async () => {
+  try {
+    const response = await api.get('/reservas')
+    reservasAdmin.value = response.data.map((r: any) => ({
+      id: 'RES' + r.id,
+      cliente: {
+        nombre: r.usuario?.nombre || 'Sin nombre',
+        email: r.usuario?.email || 'sin@email.com',
+        telefono: r.usuario?.telefono || 'N/A',
+        avatar: 'https://ui-avatars.com/api/?name=' + (r.usuario?.nombre || 'Usuario') + '&background=dc2626&color=fff'
+      },
+      producto: {
+        nombre: r.evento?.nombre || 'Sin evento',
+        categoria: r.evento?.tipo || 'Evento',
+        imagen: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=200'
+      },
+      estado: r.estado || 'pendiente',
+      cantidad: r.personas || 1,
+      precioUnitario: 0,
+      total: 0,
+      fechaReserva: r.fechaReserva || new Date().toISOString(),
+      fechaDisponibilidad: r.fechaReserva,
+      notas: 'Reserva de evento'
+    }))
+    console.log('✅ Reservas cargadas:', reservasAdmin.value.length)
+  } catch (err) {
+    console.error('❌ Error al cargar reservas:', err)
+  }
+}
+
+onMounted(() => {
+  loadEstadisticas()
+  loadProductos()
+  loadEventos()
+  loadUsuarios()
+  loadReservas()
+  loadDescuentos()
 })
 
 const getReservaCountByStatus = (status: string): number => {
@@ -564,24 +601,7 @@ const productForm = ref<Omit<Product, 'id'>>({
   image: '' 
 })
 
-const products = ref<Product[]>([
-  { 
-    id: 1, 
-    name: 'One Piece Vol. 100', 
-    category: 'Manga', 
-    price: 12.99, 
-    discount: 10, 
-    image: 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=100&h=100&fit=crop' 
-  },
-  { 
-    id: 2, 
-    name: 'Batman: The Dark Knight', 
-    category: 'Comics', 
-    price: 24.99, 
-    discount: 0, 
-    image: 'https://images.unsplash.com/photo-1594743315886-a18d195ce546?w=100&h=100&fit=crop' 
-  }
-])
+const products = ref<Product[]>([])
 
 // Eventos
 const showEventForm = ref(false)
@@ -594,16 +614,7 @@ const eventForm = ref<Omit<Event, 'id'>>({
   type: 'tournament' 
 })
 
-const events = ref<Event[]>([
-  { 
-    id: 1, 
-    name: 'Torneo TCG Magic', 
-    date: '2024-01-20', 
-    time: '18:00', 
-    description: 'Torneo competitive', 
-    type: 'tournament' 
-  }
-])
+const events = ref<Event[]>([])
 
 // Descuentos
 const showDiscountForm = ref(false)
@@ -615,45 +626,31 @@ const discountForm = ref<Omit<Discount, 'id'>>({
   expiryDate: '' 
 })
 
-const discounts = ref<Discount[]>([
-  { 
-    id: 1, 
-    code: 'DESCUENTO10', 
-    percentage: 10, 
-    description: '10% en toda la tienda', 
-    expiryDate: '2024-02-28' 
-  }
-])
+const discounts = ref<Discount[]>([])
 
 // Usuarios
-const users = ref<User[]>([
-  { 
-    id: 1, 
-    name: 'Admin', 
-    email: 'admin@rasengacomics.com', 
-    avatar: 'https://via.placeholder.com/50', 
-    joinDate: '2024-01-01' 
-  },
-  { 
-    id: 2, 
-    name: 'Usuario', 
-    email: 'usuario@rasengacomics.com', 
-    avatar: 'https://via.placeholder.com/50', 
-    joinDate: '2024-01-15' 
-  }
-])
+const users = ref<User[]>([])
 
 // Métodos Productos
-const saveProduct = (): void => {
-  if (editingProduct.value) {
-    const index = products.value.findIndex(p => p.id === editingProduct.value!.id)
-    products.value[index] = { id: editingProduct.value.id, ...productForm.value }
-  } else {
-    products.value.push({ id: Date.now(), ...productForm.value })
+const saveProduct = async (): Promise<void> => {
+  try {
+    if (editingProduct.value) {
+      // Actualizar producto existente
+      await api.put(`/api/products/${editingProduct.value.id}`, productForm.value)
+      alert('Producto actualizado correctamente')
+    } else {
+      // Crear nuevo producto
+      await api.post('/api/products', productForm.value)
+      alert('Producto creado correctamente')
+    }
+    showProductForm.value = false
+    productForm.value = { name: '', category: '', price: 0, discount: 0, description: '', image: '' }
+    editingProduct.value = null
+    await loadProductos()
+  } catch (err) {
+    console.error('❌ Error al guardar producto:', err)
+    alert('Error al guardar el producto')
   }
-  showProductForm.value = false
-  productForm.value = { name: '', category: '', price: 0, discount: 0, description: '', image: '' }
-  editingProduct.value = null
 }
 
 const editProductHandler = (product: Product): void => {
@@ -662,8 +659,17 @@ const editProductHandler = (product: Product): void => {
   showProductForm.value = true
 }
 
-const deleteProductHandler = (id: number): void => {
-  products.value = products.value.filter(p => p.id !== id)
+const deleteProductHandler = async (id: number): Promise<void> => {
+  if (confirm('¿Está seguro de que desea eliminar este producto?')) {
+    try {
+      await api.delete(`/api/products/${id}`)
+      alert('Producto eliminado correctamente')
+      await loadProductos()
+    } catch (err) {
+      console.error('❌ Error al eliminar producto:', err)
+      alert('Error al eliminar el producto')
+    }
+  }
 }
 
 const handleImageUpload = (): void => {
@@ -671,16 +677,37 @@ const handleImageUpload = (): void => {
 }
 
 // Métodos Eventos
-const saveEvent = (): void => {
-  if (editingEvent.value) {
-    const index = events.value.findIndex(e => e.id === editingEvent.value!.id)
-    events.value[index] = { id: editingEvent.value.id, ...eventForm.value }
-  } else {
-    events.value.push({ id: Date.now(), ...eventForm.value })
+const saveEvent = async (): Promise<void> => {
+  try {
+    if (editingEvent.value) {
+      // Actualizar evento existente
+      const eventoData = {
+        nombre: eventForm.value.name,
+        fecha: eventForm.value.date + 'T' + eventForm.value.time,
+        descripcion: eventForm.value.description,
+        tipo: eventForm.value.type
+      }
+      await api.put(`/eventos/${editingEvent.value.id}`, eventoData)
+      alert('Evento actualizado correctamente')
+    } else {
+      // Crear nuevo evento
+      const eventoData = {
+        nombre: eventForm.value.name,
+        fecha: eventForm.value.date + 'T' + eventForm.value.time,
+        descripcion: eventForm.value.description,
+        tipo: eventForm.value.type
+      }
+      await api.post('/eventos', eventoData)
+      alert('Evento creado correctamente')
+    }
+    showEventForm.value = false
+    eventForm.value = { name: '', date: '', time: '', description: '', type: 'tournament' }
+    editingEvent.value = null
+    await loadEventos()
+  } catch (err) {
+    console.error('❌ Error al guardar evento:', err)
+    alert('Error al guardar el evento')
   }
-  showEventForm.value = false
-  eventForm.value = { name: '', date: '', time: '', description: '', type: 'tournament' }
-  editingEvent.value = null
 }
 
 const editEventHandler = (event: Event): void => {
@@ -689,21 +716,68 @@ const editEventHandler = (event: Event): void => {
   showEventForm.value = true
 }
 
-const deleteEventHandler = (id: number): void => {
-  events.value = events.value.filter(e => e.id !== id)
+const deleteEventHandler = async (id: number): Promise<void> => {
+  if (confirm('¿Está seguro de que desea eliminar este evento?')) {
+    try {
+      await api.delete(`/eventos/${id}`)
+      alert('Evento eliminado correctamente')
+      await loadEventos()
+    } catch (err) {
+      console.error('❌ Error al eliminar evento:', err)
+      alert('Error al eliminar el evento')
+    }
+  }
 }
 
 // Métodos Descuentos
-const saveDiscount = (): void => {
-  if (editingDiscount.value) {
-    const index = discounts.value.findIndex(d => d.id === editingDiscount.value!.id)
-    discounts.value[index] = { id: editingDiscount.value.id, ...discountForm.value }
-  } else {
-    discounts.value.push({ id: Date.now(), ...discountForm.value })
+const loadDescuentos = async () => {
+  try {
+    const response = await api.get('/codigos-descuento')
+    discounts.value = response.data.map((d: any) => ({
+      id: d.id,
+      code: d.codigo || d.code,
+      percentage: d.porcentaje || d.percentage || 0,
+      description: d.descripcion || d.description || '',
+      expiryDate: d.fechaExpiracion ? new Date(d.fechaExpiracion).toISOString().split('T')[0] : ''
+    }))
+    console.log('✅ Descuentos cargados:', discounts.value.length)
+  } catch (err) {
+    console.error('❌ Error al cargar descuentos:', err)
   }
-  showDiscountForm.value = false
-  discountForm.value = { code: '', percentage: 0, description: '', expiryDate: '' }
-  editingDiscount.value = null
+}
+
+const saveDiscount = async (): Promise<void> => {
+  try {
+    if (editingDiscount.value) {
+      // Actualizar descuento existente (solo DELETE y CREATE por ahora)
+      await api.delete(`/codigos-descuento/${editingDiscount.value.id}`)
+      const discountData = {
+        codigo: discountForm.value.code,
+        porcentaje: discountForm.value.percentage,
+        descripcion: discountForm.value.description,
+        fechaExpiracion: discountForm.value.expiryDate
+      }
+      await api.post('/codigos-descuento', discountData)
+      alert('Descuento actualizado correctamente')
+    } else {
+      // Crear nuevo descuento
+      const discountData = {
+        codigo: discountForm.value.code,
+        porcentaje: discountForm.value.percentage,
+        descripcion: discountForm.value.description,
+        fechaExpiracion: discountForm.value.expiryDate
+      }
+      await api.post('/codigos-descuento', discountData)
+      alert('Descuento creado correctamente')
+    }
+    showDiscountForm.value = false
+    discountForm.value = { code: '', percentage: 0, description: '', expiryDate: '' }
+    editingDiscount.value = null
+    await loadDescuentos()
+  } catch (err) {
+    console.error('❌ Error al guardar descuento:', err)
+    alert('Error al guardar el descuento')
+  }
 }
 
 const editDiscountHandler = (discount: Discount): void => {
@@ -712,8 +786,17 @@ const editDiscountHandler = (discount: Discount): void => {
   showDiscountForm.value = true
 }
 
-const deleteDiscountHandler = (id: number): void => {
-  discounts.value = discounts.value.filter(d => d.id !== id)
+const deleteDiscountHandler = async (id: number): Promise<void> => {
+  if (confirm('¿Está seguro de que desea eliminar este código de descuento?')) {
+    try {
+      await api.delete(`/codigos-descuento/${id}`)
+      alert('Descuento eliminado correctamente')
+      await loadDescuentos()
+    } catch (err) {
+      console.error('❌ Error al eliminar descuento:', err)
+      alert('Error al eliminar el descuento')
+    }
+  }
 }
 
 // Métodos Usuarios
@@ -721,8 +804,17 @@ const viewUserHandler = (user: User): void => {
   alert(`Usuario: ${user.name}\nEmail: ${user.email}`)
 }
 
-const deleteUserHandler = (id: number): void => {
-  users.value = users.value.filter(u => u.id !== id)
+const deleteUserHandler = async (id: number | string): Promise<void> => {
+  if (confirm('¿Está seguro de que desea eliminar este usuario?')) {
+    try {
+      await api.delete(`/usuarios/${id}`)
+      alert('Usuario eliminado correctamente')
+      await loadUsuarios()
+    } catch (err) {
+      console.error('❌ Error al eliminar usuario:', err)
+      alert('Error al eliminar el usuario')
+    }
+  }
 }
 </script>
 
@@ -1275,28 +1367,98 @@ const deleteUserHandler = (id: number): void => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+}
+
+.stats-header {
+  margin-bottom: 10px;
+}
+
+.stats-header h1 {
+  font-size: 28px;
+  color: #1f2937;
+  margin: 0 0 5px 0;
+}
+
+.stats-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  color: white;
-  padding: 25px;
-  border-radius: 8px;
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #dc2626;
+  transition: all 0.3s ease;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, transparent 0%, rgba(220, 38, 38, 0.1) 100%);
+  z-index: -1;
+}
+
+.stat-card-productos {
+  border-left-color: #dc2626;
+}
+
+.stat-card-usuarios {
+  border-left-color: #3b82f6;
+}
+
+.stat-card-eventos {
+  border-left-color: #f59e0b;
+}
+
+.stat-card-reservas {
+  border-left-color: #10b981;
+}
+
+.stat-icon {
+  font-size: 32px;
+  margin-bottom: 15px;
 }
 
 .stat-card h3 {
   font-size: 14px;
-  margin-bottom: 10px;
-  opacity: 0.9;
+  color: #6b7280;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
 }
 
 .stat-number {
-  font-size: 32px;
+  font-size: 40px;
   font-weight: bold;
+  color: #1f2937;
+  margin: 10px 0;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 10px 0 0 0;
+  font-weight: 500;
 }
 
 .unauthorized {

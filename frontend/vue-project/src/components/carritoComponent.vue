@@ -54,14 +54,14 @@
           </div>
 
           <div class="summary-item">
-            <span>Envío</span>
-            <span v-if="subtotal > 50" class="free-shipping">Gratis</span>
-            <span v-else>{{ shipping.toFixed(2) }}€</span>
+            <span>IVA</span>
+            <span>{{ taxes.toFixed(2) }}€</span>
           </div>
 
           <div class="summary-item">
-            <span>Impuestos</span>
-            <span>{{ taxes.toFixed(2) }}€</span>
+            <span>Envío</span>
+            <span v-if="subtotal > 50" class="free-shipping">Gratis</span>
+            <span v-else>{{ shipping.toFixed(2) }}€</span>
           </div>
 
           <div class="summary-divider"></div>
@@ -85,79 +85,67 @@
           </router-link>
         </div>
       </div>
+
+      <!-- Modal de Autenticación Requerida -->
+      <div v-if="showAuthModal" class="auth-modal-overlay">
+        <div class="auth-modal">
+          <button @click="closeAuthModal" class="modal-close-btn">✕</button>
+          
+          <div class="modal-content">
+            <div class="modal-icon">🔐</div>
+            <h2>Inicia sesión para continuar</h2>
+            <p>Necesitas tener una cuenta activa para realizar tu compra.</p>
+            
+            <div class="modal-buttons">
+              <button @click="goToLogin" class="btn-login-modal">
+                Iniciar Sesión
+              </button>
+              <button @click="closeAuthModal" class="btn-cancel">
+                Cancelar
+              </button>
+            </div>
+
+            <p class="modal-register-text">
+              ¿No tienes cuenta? <router-link to="/registro" @click="showAuthModal = false">Regístrate aquí</router-link>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { useCartStore } from '@/stores/cartStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useRouter } from 'vue-router'
+import { ref } from 'vue'
 
-interface CartItem {
-  id: number
-  name: string
-  category: string
-  price: number
-  quantity: number
-  image: string
-}
+const cartStore = useCartStore()
+const authStore = useAuthStore()
+const router = useRouter()
 
-const cartItems = ref<CartItem[]>([
-  {
-    id: 1,
-    name: 'One Piece Vol. 100',
-    category: 'Manga',
-    price: 12.99,
-    quantity: 2,
-    image: 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=100&h=100&fit=crop'
-  },
-  {
-    id: 2,
-    name: 'Batman: The Dark Knight',
-    category: 'Comics',
-    price: 24.99,
-    quantity: 1,
-    image: 'https://images.unsplash.com/photo-1594743315886-a18d195ce546?w=100&h=100&fit=crop'
-  },
-  {
-    id: 4,
-    name: 'Naruto Figura',
-    category: 'Figuras',
-    price: 34.99,
-    quantity: 1,
-    image: 'https://images.unsplash.com/photo-1594743315886-a18d195ce546?w=100&h=100&fit=crop'
-  }
-])
+// Usar los valores del store directamente (son computed)
+const cartItems = computed(() => cartStore.items)
+const subtotal = computed(() => cartStore.subtotal)
+const shipping = computed(() => cartStore.shipping)
+const taxes = computed(() => cartStore.taxes)
+const total = computed(() => cartStore.total)
 
 const promoCode = ref('')
-
-const subtotal = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
-})
-
-const shipping = computed(() => {
-  return subtotal.value > 50 ? 0 : 10
-})
-
-const taxes = computed(() => {
-  return subtotal.value * 0.21
-})
-
-const total = computed(() => {
-  return subtotal.value + shipping.value + taxes.value
-})
+const showAuthModal = ref(false)
 
 const incrementQuantity = (itemId: number) => {
-  const item = cartItems.value.find(i => i.id === itemId)
-  if (item) item.quantity++
+  cartStore.incrementQuantity(itemId)
 }
 
 const decrementQuantity = (itemId: number) => {
-  const item = cartItems.value.find(i => i.id === itemId)
-  if (item && item.quantity > 1) item.quantity--
+  cartStore.decrementQuantity(itemId)
 }
 
 const removeItem = (itemId: number) => {
-  cartItems.value = cartItems.value.filter(i => i.id !== itemId)
+  cartStore.removeItem(itemId)
 }
 
 const applyPromo = () => {
@@ -170,7 +158,20 @@ const applyPromo = () => {
 }
 
 const checkout = () => {
+  if (!authStore.isAuthenticated) {
+    showAuthModal.value = true
+    return
+  }
   alert('Ir a checkout')
+}
+
+const goToLogin = () => {
+  router.push('/login')
+  showAuthModal.value = false
+}
+
+const closeAuthModal = () => {
+  showAuthModal.value = false
 }
 </script>
 
@@ -204,6 +205,153 @@ const checkout = () => {
   color: #6b7280;
   font-size: 18px;
   margin-bottom: 20px;
+}
+
+.empty-message {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+/* Modal de Autenticación */
+.auth-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.auth-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: color 0.3s ease;
+}
+
+.modal-close-btn:hover {
+  color: #374151;
+}
+
+.modal-content {
+  text-align: center;
+}
+
+.modal-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+.auth-modal h2 {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0 0 10px 0;
+}
+
+.auth-modal p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 25px 0;
+  line-height: 1.5;
+}
+
+.modal-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.btn-login-modal {
+  padding: 14px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-login-modal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
+}
+
+.btn-cancel {
+  padding: 14px;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  color: #374151;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background-color: #e5e7eb;
+}
+
+.modal-register-text {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0;
+}
+
+.modal-register-text a {
+  color: #dc2626;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.modal-register-text a:hover {
+  text-decoration: underline;
 }
 
 .continue-shopping {

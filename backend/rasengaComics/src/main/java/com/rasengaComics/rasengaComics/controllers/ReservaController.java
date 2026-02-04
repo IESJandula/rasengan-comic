@@ -23,7 +23,10 @@ public class ReservaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Reserva>> listar() {
+    public ResponseEntity<List<Reserva>> listar(@RequestParam(value = "email", required = false) String email) {
+        if (email != null && !email.isEmpty()) {
+            return ResponseEntity.ok(reservaService.listarPorUsuarioEmail(email));
+        }
         return ResponseEntity.ok(reservaService.listarTodas());
     }
 

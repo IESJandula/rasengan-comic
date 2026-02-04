@@ -54,5 +54,10 @@ public class EventoService {
         }
         return null;
     }
+
+    // Contar total de eventos
+    public long countAll() {
+        return eventoRepository.count();
+    }
 }
 

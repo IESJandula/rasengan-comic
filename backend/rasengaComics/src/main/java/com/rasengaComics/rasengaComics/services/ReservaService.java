@@ -36,6 +36,10 @@ public class ReservaService {
         return reservaRepository.findByUsuario(usuario);
     }
 
+    public List<Reserva> listarPorUsuarioEmail(String email) {
+        return reservaRepository.findByUsuarioEmail(email);
+    }
+
     public Reserva actualizarEstado(Long id, String nuevoEstado) {
         Optional<Reserva> opt = reservaRepository.findById(id);
         if (opt.isPresent()) {
@@ -44,6 +48,18 @@ public class ReservaService {
             return reservaRepository.save(r);
         }
         return null;
+    }
+
+    // Contar total de reservas
+    public long countAll() {
+        return reservaRepository.count();
+    }
+
+    // Contar reservas activas
+    public long countActivas() {
+        return reservaRepository.findAll().stream()
+                .filter(r -> "ACTIVA".equals(r.getEstado()))
+                .count();
     }
 }
 

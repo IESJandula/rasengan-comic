@@ -93,12 +93,15 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-// authStore not used here, using firebase auth directly
+import { useAuthStore } from '@/stores/authStore';
+import { useCartStore } from '@/stores/cartStore';
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/firebase";
 
 
 const router = useRouter();
+const authStore = useAuthStore();
+const cartStore = useCartStore();
 
 const email = ref('');
 const password = ref('');
@@ -117,11 +120,14 @@ const handleLogin = async () => {
       return;
     }
 
-    await signInWithEmailAndPassword(
+    const result = await signInWithEmailAndPassword(
       auth,
       email.value,
       password.value
     );
+
+    // Sincronizar carrito después del login
+    await cartStore.syncCartWithServer();
 
     // 🔐 Usuario autenticado correctamente
     router.push('/');
