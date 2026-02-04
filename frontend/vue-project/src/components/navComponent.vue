@@ -78,12 +78,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
+import { useCartStore } from '@/stores/cartStore'
 import { useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
+const cartStore = useCartStore()
 const router = useRouter()
 
-const cartCount = ref(3)
+const cartCount = computed(() => cartStore.totalItems)
 const imageError = ref(false)
 const searchQuery = ref('')
 

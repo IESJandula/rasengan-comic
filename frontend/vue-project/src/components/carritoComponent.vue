@@ -90,74 +90,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
+import { useCartStore } from '@/stores/cartStore'
 
-interface CartItem {
-  id: number
-  name: string
-  category: string
-  price: number
-  quantity: number
-  image: string
-}
+const cartStore = useCartStore()
 
-const cartItems = ref<CartItem[]>([
-  {
-    id: 1,
-    name: 'One Piece Vol. 100',
-    category: 'Manga',
-    price: 12.99,
-    quantity: 2,
-    image: 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=100&h=100&fit=crop'
-  },
-  {
-    id: 2,
-    name: 'Batman: The Dark Knight',
-    category: 'Comics',
-    price: 24.99,
-    quantity: 1,
-    image: 'https://images.unsplash.com/photo-1594743315886-a18d195ce546?w=100&h=100&fit=crop'
-  },
-  {
-    id: 4,
-    name: 'Naruto Figura',
-    category: 'Figuras',
-    price: 34.99,
-    quantity: 1,
-    image: 'https://images.unsplash.com/photo-1594743315886-a18d195ce546?w=100&h=100&fit=crop'
-  }
-])
+// Usar los valores del store
+const cartItems = cartStore.items
+const subtotal = cartStore.subtotal
+const shipping = cartStore.shipping
+const taxes = cartStore.taxes
+const total = cartStore.total
 
 const promoCode = ref('')
 
-const subtotal = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
-})
-
-const shipping = computed(() => {
-  return subtotal.value > 50 ? 0 : 10
-})
-
-const taxes = computed(() => {
-  return subtotal.value * 0.21
-})
-
-const total = computed(() => {
-  return subtotal.value + shipping.value + taxes.value
-})
-
 const incrementQuantity = (itemId: number) => {
-  const item = cartItems.value.find(i => i.id === itemId)
-  if (item) item.quantity++
+  cartStore.incrementQuantity(itemId)
 }
 
 const decrementQuantity = (itemId: number) => {
-  const item = cartItems.value.find(i => i.id === itemId)
-  if (item && item.quantity > 1) item.quantity--
+  cartStore.decrementQuantity(itemId)
 }
 
 const removeItem = (itemId: number) => {
-  cartItems.value = cartItems.value.filter(i => i.id !== itemId)
+  cartStore.removeItem(itemId)
 }
 
 const applyPromo = () => {

@@ -26,14 +26,15 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
-                .addFilterBefore(firebaseFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/api/products/**").permitAll() // Permitir acceso público a la API de productos
                     .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/productos/**").permitAll() // TEMP: permitir POST para pruebas
                     .requestMatchers("/hola", "/public/**", "/auth/**", "/error").permitAll()
                     .anyRequest().authenticated()
                 )
+                .addFilterBefore(firebaseFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .cors(Customizer.withDefaults());
 
         return http.build();
@@ -42,7 +43,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of(allowedOrigins));
+        cfg.setAllowedOrigins(List.of(allowedOrigins, "http://localhost:5174"));
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);

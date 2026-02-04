@@ -339,8 +339,20 @@
           <p class="products-count">{{ filteredProducts.length }} productos encontrados</p>
         </div>
 
+        <!-- Loading State -->
+        <div v-if="loading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Cargando productos...</p>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="error" class="error-state">
+          <p>{{ error }}</p>
+          <button @click="loadProducts" class="retry-btn">Reintentar</button>
+        </div>
+
         <!-- Grid de Productos -->
-        <div v-if="filteredProducts.length > 0" class="products-grid">
+        <div v-else-if="filteredProducts.length > 0" class="products-grid">
           <div 
             v-for="product in filteredProducts" 
             :key="product.id"
@@ -367,9 +379,14 @@
               <button 
                 @click.stop="addToCart(product.id)"
                 :disabled="!product.available"
-                :class="['add-to-cart-btn', product.isReserve ? 'reserve-btn' : '']"
+                :class="[
+                  'add-to-cart-btn', 
+                  product.isReserve ? 'reserve-btn' : '',
+                  recentlyAddedProducts.has(product.id) ? 'added-animation' : ''
+                ]"
               >
-                {{ product.isReserve ? 'Reservar' : (product.available ? '🛒 Agregar al Carrito' : 'No Disponible') }}
+                <span v-if="recentlyAddedProducts.has(product.id)">✅ Añadido al carrito</span>
+                <span v-else>{{ product.isReserve ? 'Reservar' : (product.available ? '🛒 Agregar al Carrito' : 'No Disponible') }}</span>
               </button>
             </div>
           </div>
@@ -390,6 +407,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import api from '../api/axios'
+import { useCartStore } from '@/stores/cartStore'
 
 const getImageUrl = (imageName: string) => {
   return new URL(`../assets/delete_inicio/${imageName}`, import.meta.url).href
@@ -397,6 +416,7 @@ const getImageUrl = (imageName: string) => {
 
 const route = useRoute()
 const router = useRouter()
+const cartStore = useCartStore()
 
 interface Product {
   id: number
@@ -414,7 +434,35 @@ interface Product {
   isNew?: boolean
 }
 
-const products: Product[] = [
+const products = ref<Product[]>([])
+const loading = ref(true)
+const error = ref<string | null>(null)
+const recentlyAddedProducts = ref<Set<number>>(new Set())
+
+// Función para cargar productos desde la API
+const loadProducts = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    const response = await api.get('/api/products')
+    // Transformar las imágenes a URLs completas
+    products.value = response.data.map((product: Product) => ({
+      ...product,
+      image: getImageUrl(product.image)
+    }))
+    console.log('✅ Productos cargados:', response.data.length)
+  } catch (err) {
+    console.error('❌ Error al cargar productos:', err)
+    error.value = 'Error al cargar los productos'
+    // Fallback: usar productos vacíos si falla
+    products.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+// Datos hardcodeados como respaldo (se mantendrán pero no se usarán)
+const productsBackup: Product[] = [
   {
     id: 1,
     name: 'Attack of Titans Vol. 34',
@@ -903,8 +951,11 @@ const minRating = ref<number>(0)
 const minDiscount = ref<number>(0)
 const sortBy = ref('newest')
 
-// Inicializar filtros desde la URL
-onMounted(() => {
+// Inicializar filtros desde la URL y cargar productos
+onMounted(async () => {
+  // Cargar productos desde la API
+  await loadProducts()
+  
   const category = route.query.category as string
   const subcategory = route.query.sub as string
   
@@ -958,7 +1009,7 @@ const onCategoryChange = (category: string) => {
 }
 
 const filteredProducts = computed(() => {
-  const result = products.filter((product) => {
+  const result = products.value.filter((product) => {
     const categoryMatch = 
       selectedCategories.value.length === 0 || 
       selectedCategories.value.includes(product.category)
@@ -1017,11 +1068,27 @@ const clearFilters = () => {
 }
 
 const addToCart = (productId: number) => {
-  const product = products.find(p => p.id === productId)
-  if (product?.isReserve) {
-    alert(`Reserva realizada para: ${product.name}`)
+  const product = products.value.find(p => p.id === productId)
+  if (!product) return
+  
+  if (product.isReserve) {
+    alert(`✅ Reserva realizada para: ${product.name}`)
   } else {
-    alert(`Producto añadido al carrito`)
+    cartStore.addToCart({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      price: product.price,
+      image: product.image
+    })
+    
+    // Agregar producto a la lista de recientemente agregados
+    recentlyAddedProducts.value.add(productId)
+    
+    // Remover después de 1.5 segundos para que se vea la animación
+    setTimeout(() => {
+      recentlyAddedProducts.value.delete(productId)
+    }, 1500)
   }
 }
 
@@ -1402,11 +1469,83 @@ const viewProduct = (productId: number) => {
   cursor: not-allowed;
 }
 
+.add-to-cart-btn.added-animation {
+  background-color: #22c55e !important;
+  animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
 .no-products {
   text-align: center;
   padding: 60px 20px;
   background-color: white;
   border-radius: 8px;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  background-color: white;
+  border-radius: 8px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f4f6;
+  border-top: 5px solid #dc2626;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+  background-color: white;
+  border-radius: 8px;
+}
+
+.error-state p {
+  color: #dc2626;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.retry-btn {
+  padding: 10px 20px;
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.retry-btn:hover {
+  background-color: #b91c1c;
 }
 
 .no-products p {

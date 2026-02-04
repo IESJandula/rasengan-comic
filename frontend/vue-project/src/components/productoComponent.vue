@@ -153,8 +153,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useCartStore } from '@/stores/cartStore';
 
 const router = useRouter(); 
+const cartStore = useCartStore(); 
 
 const quantity = ref(1);
 const isInWishlist = ref(false);
@@ -234,6 +236,13 @@ const relatedProducts = [
 ];
 
 const addToCart = () => {
+  cartStore.addToCart({
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    price: product.price,
+    image: product.images[0]
+  }, quantity.value);
   alert(`✅ Agregado ${quantity.value} unidad(es) de ${product.name} al carrito`);
 };
 
