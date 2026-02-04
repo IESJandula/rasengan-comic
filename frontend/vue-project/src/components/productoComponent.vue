@@ -1,6 +1,15 @@
 <template>
   <div class="product-detail-container">
-    <div class="product-detail-wrapper">
+    <div v-if="loading" class="loading-state">
+      <p>Cargando producto...</p>
+    </div>
+    
+    <div v-else-if="error" class="error-state">
+      <p>{{ error }}</p>
+      <button @click="() => router.back()" class="back-btn">Volver atrás</button>
+    </div>
+
+    <div v-else class="product-detail-wrapper">
       <!-- Galería de imágenes -->
       <div class="product-gallery">
         <div class="main-image">
@@ -35,7 +44,7 @@
             <span class="current-price">{{ product.price }}€</span>
           </div>
           <div v-if="product.discount" class="save-amount">
-            Ahorras {{ (product.originalPrice - product.price).toFixed(2) }}€
+            Ahorras {{ (product.originalPrice! - product.price).toFixed(2) }}€
           </div>
         </div>
 
@@ -151,18 +160,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useCartStore } from '@/stores/cartStore';
+import api from '../api/axios';
 
-const router = useRouter(); 
-const cartStore = useCartStore(); 
+const router = useRouter();
+const route = useRoute();
+const cartStore = useCartStore();
 
 const quantity = ref(1);
 const isInWishlist = ref(false);
 const currentImage = ref('https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=600&h=800&fit=crop');
+const loading = ref(true);
+const error = ref<string | null>(null);
 
-const product = {
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  rating: number;
+  reviews: number;
+  available: boolean;
+  description: string;
+  author: string;
+  publisher: string;
+  year: number;
+  pages: number;
+  images: string[];
+}
+
+const product = ref<Product>({
   id: 1,
   name: 'One Piece Vol. 100 - Edición Especial',
   category: 'Manga',
@@ -182,6 +213,30 @@ const product = {
     'https://images.unsplash.com/photo-1594743315886-a18d195ce546?w=600&h=800&fit=crop',
     'https://images.unsplash.com/photo-1535016120754-fd45c1d1ff97?w=600&h=800&fit=crop'
   ]
+});
+
+// Cargar producto desde la API basado en el ID de la ruta
+const loadProduct = async () => {
+  try {
+    loading.value = true;
+    error.value = null;
+    const productId = route.params.id;
+    const response = await api.get(`/api/products/${productId}`);
+    
+    product.value = {
+      ...response.data,
+      images: response.data.images || [response.data.image]
+    };
+    
+    if (product.value.images.length > 0) {
+      currentImage.value = product.value.images[0];
+    }
+  } catch (err) {
+    console.error('Error cargando el producto:', err);
+    error.value = 'No se pudo cargar el producto. Por favor, intenta más tarde.';
+  } finally {
+    loading.value = false;
+  }
 };
 
 const reviews = [
@@ -235,15 +290,19 @@ const relatedProducts = [
   }
 ];
 
+onMounted(() => {
+  loadProduct();
+});
+
 const addToCart = () => {
   cartStore.addToCart({
-    id: product.id,
-    name: product.name,
-    category: product.category,
-    price: product.price,
-    image: product.images[0]
+    id: product.value.id,
+    name: product.value.name,
+    category: product.value.category,
+    price: product.value.price,
+    image: product.value.images[0]
   }, quantity.value);
-  alert(`✅ Agregado ${quantity.value} unidad(es) de ${product.name} al carrito`);
+  alert(`✅ Agregado ${quantity.value} unidad(es) de ${product.value.name} al carrito`);
 };
 
 const addToWishlist = () => {
@@ -261,6 +320,40 @@ const viewProduct = (productId: number) => {
 .product-detail-container {
   background-color: #f9fafb;
   padding: 30px 20px;
+}
+
+.loading-state,
+.error-state {
+  max-width: 1200px;
+  margin: 100px auto;
+  text-align: center;
+  padding: 40px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.loading-state p,
+.error-state p {
+  font-size: 18px;
+  color: #6b7280;
+  margin: 0 0 20px 0;
+}
+
+.back-btn {
+  padding: 10px 20px;
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background-color: #b91c1c;
+  transform: translateY(-2px);
 }
 
 .product-detail-wrapper {

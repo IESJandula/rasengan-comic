@@ -65,11 +65,6 @@ const routes = [
     component: tiendaComponent,
   },
   {
-  path: '/producto/:id',
-  name: 'Producto',
-  component: () => import('@/components/productoComponent.vue')
-  },
-  {
     path: '/reservas',
     name: 'Reservas',
     component: () => import('@/components/reservasComponent.vue'),
