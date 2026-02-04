@@ -175,6 +175,26 @@ const currentImage = ref('https://images.unsplash.com/photo-1612036782180-69db8e
 const loading = ref(true);
 const error = ref<string | null>(null);
 
+const resolveImageUrl = (image?: string): string => {
+  if (!image) return '';
+  if (
+    image.startsWith('http://') ||
+    image.startsWith('https://') ||
+    image.startsWith('data:') ||
+    image.startsWith('blob:')
+  ) {
+    return image;
+  }
+  return new URL(`../assets/delete_inicio/${image}`, import.meta.url).href;
+};
+
+const resolveImages = (images?: string[], fallbackImage?: string): string[] => {
+  const list = images && images.length > 0 ? images : (fallbackImage ? [fallbackImage] : []);
+  return list
+    .map(resolveImageUrl)
+    .filter((img) => img.length > 0);
+};
+
 interface Product {
   id: number;
   name: string;
@@ -225,7 +245,7 @@ const loadProduct = async () => {
     
     product.value = {
       ...response.data,
-      images: response.data.images || [response.data.image]
+      images: resolveImages(response.data.images, response.data.image)
     };
     
     if (product.value.images.length > 0) {
