@@ -1,6 +1,34 @@
 package com.rasengaComics.rasengaComics.services;
 
+import com.rasengaComics.rasengaComics.models.Resena;
+import com.rasengaComics.rasengaComics.repositories.ResenaRepository;
+import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.Optional;
+
+@Service
 public class ResenaService {
-    // placeholder
+
+    private final ResenaRepository resenaRepository;
+
+    public ResenaService(ResenaRepository resenaRepository) {
+        this.resenaRepository = resenaRepository;
+    }
+
+    public List<Resena> listarTodas() {
+        return resenaRepository.findAll();
+    }
+
+    public Optional<Resena> obtener(Long id) {
+        return resenaRepository.findById(id);
+    }
+
+    public Resena guardar(Resena resena) {
+        return resenaRepository.save(resena);
+    }
+
+    public void eliminar(Long id) {
+        resenaRepository.deleteById(id);
+    }
 }
 

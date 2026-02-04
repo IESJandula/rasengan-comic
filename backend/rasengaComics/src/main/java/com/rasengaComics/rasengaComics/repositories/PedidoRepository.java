@@ -1,6 +1,14 @@
 package com.rasengaComics.rasengaComics.repositories;
 
-public interface PedidoRepository {
-    // placeholder
+import com.rasengaComics.rasengaComics.models.Pedido;
+import com.rasengaComics.rasengaComics.models.Usuario;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface PedidoRepository extends JpaRepository<Pedido, Long> {
+    List<Pedido> findByUsuario(Usuario usuario);
 }
 
