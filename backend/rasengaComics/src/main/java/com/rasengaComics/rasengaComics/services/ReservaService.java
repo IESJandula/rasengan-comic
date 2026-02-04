@@ -45,5 +45,17 @@ public class ReservaService {
         }
         return null;
     }
+
+    // Contar total de reservas
+    public long countAll() {
+        return reservaRepository.count();
+    }
+
+    // Contar reservas activas
+    public long countActivas() {
+        return reservaRepository.findAll().stream()
+                .filter(r -> "ACTIVA".equals(r.getEstado()))
+                .count();
+    }
 }
 

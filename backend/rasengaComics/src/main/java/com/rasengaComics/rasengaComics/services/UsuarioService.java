@@ -76,6 +76,11 @@ public class UsuarioService {
         return optUsuario.isPresent() && "ADMIN".equals(optUsuario.get().getRol());
     }
 
+    // Contar total de usuarios
+    public long countAll() {
+        return usuarioRepository.count();
+    }
+
     // Mapping helpers
     public UsuarioResponse toResponse(Usuario u) {
         if (u == null) return null;
