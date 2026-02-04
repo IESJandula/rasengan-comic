@@ -21,6 +21,8 @@
             placeholder="Buscar comics, manga, merchandising..."
             class="search-input"
             @keyup.enter="handleSearch"
+            @input="performLiveSearch(searchQuery)"
+            @blur="setTimeout(() => showSearchResults = false, 200)"
           />
           <button 
             v-if="searchQuery" 
@@ -29,6 +31,23 @@
           >
             ✕
           </button>
+          
+          <!-- Resultados de búsqueda en vivo -->
+          <div v-if="showSearchResults && searchResults.length > 0" class="search-results">
+            <div 
+              v-for="product in searchResults" 
+              :key="product.id"
+              class="search-result-item"
+              @click="selectSearchResult(product)"
+            >
+              <img :src="product.image" :alt="product.name" class="result-image" />
+              <div class="result-info">
+                <div class="result-name">{{ product.name }}</div>
+                <div class="result-category">{{ product.category }}</div>
+                <div class="result-price">{{ product.price }}€</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -80,6 +99,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useCartStore } from '@/stores/cartStore'
 import { useRouter } from 'vue-router'
+import api from '@/api/axios'
 
 const authStore = useAuthStore()
 const cartStore = useCartStore()
@@ -88,6 +108,8 @@ const router = useRouter()
 const cartCount = computed(() => cartStore.totalItems)
 const imageError = ref(false)
 const searchQuery = ref('')
+const searchResults = ref<any[]>([])
+const showSearchResults = ref(false)
 
 // Avatar por defecto
 const defaultAvatar = 'https://ui-avatars.com/api/?name=Usuario&background=dc2626&color=fff&size=128'
@@ -140,13 +162,47 @@ const goToRegister = (): void => {
 const handleSearch = (): void => {
   if (searchQuery.value.trim()) {
     console.log('Buscando:', searchQuery.value)
-    router.push({ path: '/tienda', query: { q: searchQuery.value } })
+    router.push({ path: '/catalogo', query: { q: searchQuery.value } })
     searchQuery.value = ''
+    showSearchResults.value = false
   }
 }
 
 const clearSearch = (): void => {
   searchQuery.value = ''
+  searchResults.value = []
+  showSearchResults.value = false
+}
+
+// Búsqueda en vivo desde la API
+const performLiveSearch = async (query: string): Promise<void> => {
+  if (query.length >= 3) {
+    try {
+      const response = await api.get('/api/products')
+      const products = response.data as any[]
+      
+      const filtered = products.filter((product) =>
+        product.name.toLowerCase().includes(query.toLowerCase()) ||
+        product.category.toLowerCase().includes(query.toLowerCase()) ||
+        (product.subcategory && product.subcategory.toLowerCase().includes(query.toLowerCase()))
+      )
+      
+      searchResults.value = filtered.slice(0, 5) // Mostrar máximo 5 resultados
+      showSearchResults.value = true
+    } catch (err) {
+      console.error('Error en búsqueda:', err)
+      searchResults.value = []
+    }
+  } else {
+    searchResults.value = []
+    showSearchResults.value = false
+  }
+}
+
+const selectSearchResult = (product: any): void => {
+  router.push({ path: '/catalogo', query: { q: product.name } })
+  searchQuery.value = ''
+  showSearchResults.value = false
 }
 </script>
 
@@ -289,6 +345,74 @@ const clearSearch = (): void => {
   background-color: #dc2626;
   color: white;
   transform: scale(1.1);
+}
+
+.search-wrapper {
+  position: relative;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.search-result-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  align-items: center;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background-color: #f9fafb;
+}
+
+.result-image {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.result-info {
+  flex: 1;
+}
+
+.result-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.result-category {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.result-price {
+  font-weight: 600;
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 2px;
 }
 
 .user-section {

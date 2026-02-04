@@ -950,6 +950,7 @@ const onlyNew = ref(false)
 const minRating = ref<number>(0)
 const minDiscount = ref<number>(0)
 const sortBy = ref('newest')
+const searchQuery = ref('')
 
 // Inicializar filtros desde la URL y cargar productos
 onMounted(async () => {
@@ -958,6 +959,7 @@ onMounted(async () => {
   
   const category = route.query.category as string
   const subcategory = route.query.sub as string
+  const q = route.query.q as string
   
   if (category) {
     selectedCategories.value = [category]
@@ -965,6 +967,10 @@ onMounted(async () => {
   
   if (subcategory) {
     selectedSubcategories.value = [subcategory]
+  }
+  
+  if (q) {
+    searchQuery.value = q
   }
 })
 
@@ -1033,9 +1039,14 @@ const filteredProducts = computed(() => {
     const ratingMatch = minRating.value === 0 || product.rating >= minRating.value
     
     const discountMinMatch = minDiscount.value === 0 || (product.discount && product.discount >= minDiscount.value)
+    
+    const searchMatch = !searchQuery.value || 
+      product.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      (product.subcategory && product.subcategory.toLowerCase().includes(searchQuery.value.toLowerCase()))
 
     return categoryMatch && subcategoryMatch && priceMatch && availabilityMatch && 
-           reserveMatch && discountMatch && newMatch && ratingMatch && discountMinMatch
+           reserveMatch && discountMatch && newMatch && ratingMatch && discountMinMatch && searchMatch
   })
 
   // Ordenar

@@ -54,14 +54,14 @@
           </div>
 
           <div class="summary-item">
-            <span>Envío</span>
-            <span v-if="subtotal > 50" class="free-shipping">Gratis</span>
-            <span v-else>{{ shipping.toFixed(2) }}€</span>
+            <span>IVA</span>
+            <span>{{ taxes.toFixed(2) }}€</span>
           </div>
 
           <div class="summary-item">
-            <span>Impuestos</span>
-            <span>{{ taxes.toFixed(2) }}€</span>
+            <span>Envío</span>
+            <span v-if="subtotal > 50" class="free-shipping">Gratis</span>
+            <span v-else>{{ shipping.toFixed(2) }}€</span>
           </div>
 
           <div class="summary-divider"></div>
@@ -90,17 +90,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 import { useCartStore } from '@/stores/cartStore'
+import { ref } from 'vue'
 
 const cartStore = useCartStore()
 
-// Usar los valores del store
-const cartItems = cartStore.items
-const subtotal = cartStore.subtotal
-const shipping = cartStore.shipping
-const taxes = cartStore.taxes
-const total = cartStore.total
+// Usar los valores del store directamente (son computed)
+const cartItems = computed(() => cartStore.items)
+const subtotal = computed(() => cartStore.subtotal)
+const shipping = computed(() => cartStore.shipping)
+const taxes = computed(() => cartStore.taxes)
+const total = computed(() => cartStore.total)
 
 const promoCode = ref('')
 

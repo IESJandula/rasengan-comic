@@ -28,9 +28,13 @@ export const useCartStore = defineStore('cart', () => {
     return subtotal.value > 50 ? 0 : 10
   })
 
-  // Computed para calcular impuestos (21%)
+  // Computed para calcular impuestos dinámicos según la categoría
+  // Comics y Manga: 10%, resto: 21%
   const taxes = computed(() => {
-    return subtotal.value * 0.21
+    return items.value.reduce((totalTaxes, item) => {
+      const taxRate = (item.category === 'Comics' || item.category === 'Manga') ? 0.10 : 0.21
+      return totalTaxes + (item.price * item.quantity * taxRate)
+    }, 0)
   })
 
   // Computed para calcular el total
