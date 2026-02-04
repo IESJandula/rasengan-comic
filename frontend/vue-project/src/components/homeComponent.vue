@@ -56,7 +56,7 @@
             style="cursor: pointer;"
           >
             <img
-              :src="item.image"
+              :src="resolveImageUrl(item.image)"
               :alt="item.name"
               class="product-image"
             />
@@ -90,7 +90,7 @@
               class="reserva-item"
             >
               <img 
-                :src="producto.image || 'https://via.placeholder.com/80'" 
+                :src="resolveImageUrl(producto.image) || 'https://via.placeholder.com/80'" 
                 :alt="producto.name"
                 class="reserva-image"
               />
@@ -302,10 +302,12 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore'
+import { useCartStore } from '@/stores/cartStore'
 import api from '@/api/axios'
 
 const router = useRouter();
 const authStore = useAuthStore()
+const cartStore = useCartStore()
 
 // Importar imágenes desde src/assets/images/
 import banner1 from '@/assets/images/banner1.webp';
@@ -315,6 +317,19 @@ import banner3 from '@/assets/images/banner3.webp';
 // Función para cargar imágenes desde delete_inicio
 const getImageUrl = (imageName: string) => {
   return new URL(`../assets/delete_inicio/${imageName}`, import.meta.url).href
+}
+
+const resolveImageUrl = (image?: string): string => {
+  if (!image) return ''
+  if (
+    image.startsWith('http://') ||
+    image.startsWith('https://') ||
+    image.startsWith('data:') ||
+    image.startsWith('blob:')
+  ) {
+    return image
+  }
+  return new URL(`../assets/delete_inicio/${image}`, import.meta.url).href
 }
 
 const currentSlide = ref(0);
@@ -328,6 +343,7 @@ const slides = [
 
 // Productos más comprados (cargados desde API)
 const productosMasComprados = ref<any[]>([])
+const allProducts = ref<any[]>([])
 
 // Reservas del usuario
 const reservasUsuario = ref<any[]>([])
@@ -343,18 +359,52 @@ const formatPrice = (price: number): string => {
   return `${price.toFixed(2)}€`
 }
 
+const normalizeText = (value: string | undefined | null): string => {
+  return (value || '').toLowerCase().trim()
+}
+
+const mapToHomeItem = (product: any) => ({
+  id: product.id,
+  nombre: product.name,
+  precio: formatPrice(product.price),
+  imagen: resolveImageUrl(product.image) || product.image,
+  subcategoria: product.subcategory || product.category
+})
+
+const setCategoryItems = (categoryKeys: string[], target: { value: any[] }) => {
+  const items = allProducts.value
+    .filter((p: any) => categoryKeys.some((k) => normalizeText(p.category).includes(k)))
+    .slice(0, 3)
+    .map(mapToHomeItem)
+
+  if (items.length > 0) {
+    target.value = items
+  }
+}
+
 // Cargar productos más comprados desde la API
 const loadProductosMasComprados = async () => {
   try {
     const response = await api.get('/api/products')
+    allProducts.value = response.data.map((p: any) => ({
+      ...p,
+      image: resolveImageUrl(p.image) || p.image
+    }))
     // Tomar los primeros 3 productos
-    productosMasComprados.value = response.data.slice(0, 3).map((p: any) => ({
+    productosMasComprados.value = allProducts.value.slice(0, 3).map((p: any) => ({
       id: p.id,
       name: p.name,
       category: p.category,
       price: p.price,
       image: p.image || 'https://via.placeholder.com/200'
     }))
+
+    setCategoryItems(['juegos', 'mesa'], ultimosJuegosMesa)
+    setCategoryItems(['tcg'], ultimosTCG)
+    setCategoryItems(['comics'], ultimosComics)
+    setCategoryItems(['manga'], ultimosManga)
+    setCategoryItems(['figuras', 'figura'], ultimasFiguras)
+    setCategoryItems(['accesorios', 'accesorio'], ultimosAccesorios)
     console.log('✅ Productos más comprados cargados:', productosMasComprados.value.length)
   } catch (err) {
     console.error('❌ Error al cargar productos:', err)
@@ -418,7 +468,7 @@ const productos = [
 ];
 
 // Últimos productos por categoría
-const ultimosJuegosMesa = [
+const ultimosJuegosMesa = ref<any[]>([
   {
     id: 101,
     nombre: 'Wingspan',
@@ -440,9 +490,9 @@ const ultimosJuegosMesa = [
     imagen: getImageUrl('pandemic.png'),
     subcategoria: 'Cooperativo'
   }
-];
+]);
 
-const ultimosTCG = [
+const ultimosTCG = ref<any[]>([
   {
     id: 201,
     nombre: 'Yu-Gi-Oh! Booster',
@@ -464,9 +514,9 @@ const ultimosTCG = [
     imagen: getImageUrl('pokemon paradox rift.jpg'),
     subcategoria: 'Pokémon'
   }
-];
+]);
 
-const ultimosComics = [
+const ultimosComics = ref<any[]>([
   {
     id: 301,
     nombre: 'Spider-Man #1',
@@ -488,9 +538,9 @@ const ultimosComics = [
     imagen: getImageUrl('walking-dead.jpg'),
     subcategoria: 'Image'
   }
-];
+]);
 
-const ultimosManga = [
+const ultimosManga = ref<any[]>([
   {
     id: 401,
     nombre: 'Jujutsu Kaisen Vol. 20',
@@ -512,9 +562,9 @@ const ultimosManga = [
     imagen: getImageUrl('berserk-deluxe-vol8.jpg'),
     subcategoria: 'Seinen'
   }
-];
+]);
 
-const ultimasFiguras = [
+const ultimasFiguras = ref<any[]>([
   {
     id: 501,
     nombre: 'Nendoroid Gojo',
@@ -536,9 +586,9 @@ const ultimasFiguras = [
     imagen: getImageUrl('luffy-gear-5.jpg'),
     subcategoria: 'Scale Figures'
   }
-];
+]);
 
-const ultimosAccesorios = [
+const ultimosAccesorios = ref<any[]>([
   {
     id: 601,
     nombre: 'Dragon Shield Sleeves',
@@ -560,7 +610,7 @@ const ultimosAccesorios = [
     imagen: getImageUrl('custom-paymat.jpg'),
     subcategoria: 'Playmat'
   }
-];
+]);
 
 let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -635,7 +685,10 @@ const loadEventosDisponibles = async () => {
     
     if (response.data && Array.isArray(response.data)) {
       // Tomar los primeros 6 productos de reserva
-      productosReserva.value = response.data.slice(0, 6)
+      productosReserva.value = response.data.slice(0, 6).map((p: any) => ({
+        ...p,
+        image: resolveImageUrl(p.image) || p.image
+      }))
       console.log('✅ Productos de reserva cargados:', productosReserva.value.length)
     }
   } catch (err) {
@@ -936,6 +989,14 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 15px;
+}
+
+.reserva-image {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-right: 16px;
 }
 
 .reserva-item {
