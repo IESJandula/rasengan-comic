@@ -83,7 +83,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import api from '../api/axios'
 
 interface Event {
   id: number
@@ -103,68 +104,68 @@ interface CalendarDay {
 }
 
 const currentMonth = ref<Date>(new Date())
+const allEvents = ref<Event[]>([])
 
-const generateEvents = (): Event[] => {
-  const today = new Date()
-  return [
-    {
-      id: 1,
-      name: 'Torneo TCG Magic',
-      time: '18:00',
-      description: 'Torneo competitivo de Magic The Gathering. Inscripción abierta.',
-      type: 'tournament',
-      date: new Date(today.getFullYear(), today.getMonth(), 8),
-      location: 'Sala Principal',
-    },
-    {
-      id: 2,
-      name: 'Taller de Dibujo Manga',
-      time: '16:00',
-      description: 'Aprende técnicas básicas de manga con nuestros expertos.',
-      type: 'workshop',
-      date: new Date(today.getFullYear(), today.getMonth(), 15),
-      location: 'Aula de Arte',
-    },
-    {
-      id: 3,
-      name: 'Noche de Board Games',
-      time: '19:00',
-      description: 'Juega con otros fanáticos de los juegos de mesa.',
-      type: 'special',
-      date: new Date(today.getFullYear(), today.getMonth(), 10),
-      location: 'Zona Gaming',
-    },
-    {
-      id: 4,
-      name: 'Meet & Greet Autores',
-      time: '17:00',
-      description: 'Conoce a autores de manga locales. Sesión de firmas incluida.',
-      type: 'special',
-      date: new Date(today.getFullYear(), today.getMonth(), 22),
-      location: 'Entrada Principal',
-    },
-    {
-      id: 5,
-      name: 'Campeonato Pokémon',
-      time: '15:00',
-      description: 'Torneo regional de Pokémon TCG con premios.',
-      type: 'tournament',
-      date: new Date(today.getFullYear(), today.getMonth(), 25),
-      location: 'Sala Principal',
-    },
-    {
-      id: 6,
-      name: 'Screening Anime',
-      time: '20:00',
-      description: 'Proyección especial de anime clásicos.',
-      type: 'special',
-      date: new Date(today.getFullYear(), today.getMonth(), 12),
-      location: 'Auditorio',
-    },
-  ]
+// Determinar el tipo de evento basándose en el nombre
+const getEventType = (nombre: string): 'tournament' | 'workshop' | 'special' => {
+  const nombreLower = nombre.toLowerCase()
+  if (nombreLower.includes('torneo') || nombreLower.includes('campeonato') || nombreLower.includes('competición')) {
+    return 'tournament'
+  } else if (nombreLower.includes('taller') || nombreLower.includes('workshop')) {
+    return 'workshop'
+  }
+  return 'special'
 }
 
-const allEvents = generateEvents()
+// Cargar eventos desde la API
+const loadEvents = async () => {
+  try {
+    console.log('🔄 Cargando eventos desde la API...')
+    const response = await api.get('/eventos')
+    
+    console.log('📦 Respuesta de la API:', response.data)
+    
+    if (response.data && Array.isArray(response.data)) {
+      allEvents.value = response.data.map((evento: any) => {
+        // Convertir la fecha del backend (puede venir en varios formatos)
+        let fechaHora: Date
+        if (typeof evento.fechaHora === 'string') {
+          // Si es string, usar new Date() que maneja ISO 8601
+          fechaHora = new Date(evento.fechaHora)
+        } else if (Array.isArray(evento.fechaHora)) {
+          // Si viene como array [year, month, day, hour, minute, second]
+          const [year, month, day, hour = 0, minute = 0, second = 0] = evento.fechaHora
+          fechaHora = new Date(year, month - 1, day, hour, minute, second)
+        } else {
+          fechaHora = new Date(evento.fechaHora)
+        }
+        
+        console.log('📅 Evento:', evento.nombre, '→', fechaHora)
+        
+        return {
+          id: evento.id,
+          name: evento.nombre,
+          time: fechaHora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+          description: evento.descripcion,
+          type: getEventType(evento.nombre),
+          date: fechaHora,
+          location: evento.ubicacion
+        }
+      })
+      console.log('✅ Eventos cargados desde la base de datos:', allEvents.value.length)
+      console.log('📋 Todos los eventos:', allEvents.value)
+    } else {
+      console.warn('⚠️ No se recibieron eventos en el formato esperado')
+    }
+  } catch (err) {
+    console.error('❌ Error al cargar eventos:', err)
+    allEvents.value = []
+  }
+}
+
+onMounted(() => {
+  loadEvents()
+})
 
 const calendarDays = computed((): CalendarDay[] => {
   const year = currentMonth.value.getFullYear()
@@ -186,7 +187,7 @@ const calendarDays = computed((): CalendarDay[] => {
     const isCurrentMonth = date.getMonth() === month
     const isToday = date.toDateString() === today.toDateString()
     
-    const dayEvents = allEvents.filter(event => 
+    const dayEvents = allEvents.value.filter(event => 
       event.date.getDate() === date.getDate() &&
       event.date.getMonth() === date.getMonth() &&
       event.date.getFullYear() === date.getFullYear()
@@ -207,7 +208,7 @@ const eventsOfCurrentMonth = computed((): Event[] => {
   const month = currentMonth.value.getMonth()
   const year = currentMonth.value.getFullYear()
   
-  return allEvents
+  return allEvents.value
     .filter(event => 
       event.date.getMonth() === month &&
       event.date.getFullYear() === year
