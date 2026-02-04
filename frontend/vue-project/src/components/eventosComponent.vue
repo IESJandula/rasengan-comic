@@ -26,10 +26,12 @@
             <div 
               v-for="(day, index) in calendarDays" 
               :key="index" 
+              @click="selectDay(day)"
               :class="['day-cell', { 
                 'other-month': !day.isCurrentMonth, 
                 'today': day.isToday,
-                'has-events': day.events.length > 0
+                'has-events': day.events.length > 0,
+                'selected': isSelectedDay(day)
               }]"
             >
               <div class="day-number">{{ day.date }}</div>
@@ -51,17 +53,22 @@
           </div>
         </div>
 
-        <!-- Vista detallada de eventos del mes -->
+        <!-- Vista detallada de eventos del día seleccionado -->
         <div class="events-detail">
-          <h3>Eventos de {{ getCurrentMonthTitle() }}</h3>
+          <h3 v-if="selectedDay">Eventos de {{ formatSelectedDate() }}</h3>
+          <h3 v-else>Selecciona un día para ver eventos</h3>
           
-          <div v-if="eventsOfCurrentMonth.length === 0" class="no-events-message">
-            <p>📭 No hay eventos programados para este mes</p>
+          <div v-if="!selectedDay" class="no-events-message">
+            <p>📅 Haz click en un día del calendario para ver los eventos de ese día</p>
+          </div>
+
+          <div v-else-if="selectedDayEvents.length === 0" class="no-events-message">
+            <p>📭 No hay eventos programados para este día</p>
           </div>
 
           <div v-else class="events-list-detail">
             <div 
-              v-for="event in eventsOfCurrentMonth" 
+              v-for="event in selectedDayEvents" 
               :key="event.id" 
               :class="['event-card', event.type]"
             >
@@ -105,6 +112,7 @@ interface CalendarDay {
 
 const currentMonth = ref<Date>(new Date())
 const allEvents = ref<Event[]>([])
+const selectedDay = ref<CalendarDay | null>(null)
 
 // Determinar el tipo de evento basándose en el nombre
 const getEventType = (nombre: string): 'tournament' | 'workshop' | 'special' => {
@@ -216,16 +224,41 @@ const eventsOfCurrentMonth = computed((): Event[] => {
     .sort((a, b) => a.date.getTime() - b.date.getTime())
 })
 
+const selectedDayEvents = computed((): Event[] => {
+  if (!selectedDay.value) return []
+  return selectedDay.value.events.sort((a, b) => a.date.getTime() - b.date.getTime())
+})
+
 const getCurrentMonthTitle = (): string => {
   return currentMonth.value.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
 }
 
 const previousMonth = () => {
   currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() - 1)
+  selectedDay.value = null
 }
 
 const nextMonth = () => {
   currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() + 1)
+  selectedDay.value = null
+}
+
+const selectDay = (day: CalendarDay) => {
+  selectedDay.value = day
+}
+
+const isSelectedDay = (day: CalendarDay): boolean => {
+  if (!selectedDay.value) return false
+  return selectedDay.value.date === day.date && 
+         selectedDay.value.isCurrentMonth === day.isCurrentMonth
+}
+
+const formatSelectedDate = (): string => {
+  if (!selectedDay.value) return ''
+  const year = currentMonth.value.getFullYear()
+  const month = currentMonth.value.getMonth()
+  const date = new Date(year, month, selectedDay.value.date)
+  return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 const formatEventDate = (date: Date): string => {
@@ -343,11 +376,18 @@ const formatEventDate = (date: Date): string => {
   display: flex;
   flex-direction: column;
   min-height: 80px;
+  cursor: pointer;
+}
+
+.day-cell:hover {
+  border-color: #dc2626;
+  background-color: #fff5f5;
 }
 
 .day-cell.other-month {
   background-color: #f3f4f6;
   color: #d1d5db;
+  cursor: default;
 }
 
 .day-cell.today {
@@ -361,11 +401,23 @@ const formatEventDate = (date: Date): string => {
   background-color: #fffbfb;
 }
 
+.day-cell.selected {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border-color: #991b1b;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 8px 16px rgba(220, 38, 38, 0.4);
+}
+
 .day-number {
   font-size: 14px;
   font-weight: bold;
   color: #1f2937;
   margin-bottom: 4px;
+}
+
+.day-cell.selected .day-number {
+  color: white;
 }
 
 .day-events {
