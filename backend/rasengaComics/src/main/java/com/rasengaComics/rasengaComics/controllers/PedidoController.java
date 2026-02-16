@@ -2,9 +2,12 @@ package com.rasengaComics.rasengaComics.controllers;
 
 import com.rasengaComics.rasengaComics.services.PedidoService;
 import com.rasengaComics.rasengaComics.models.Pedido;
+import com.rasengaComics.rasengaComics.models.DetallePedido;
+import com.rasengaComics.rasengaComics.models.Usuario;
 import com.rasengaComics.rasengaComics.dto.request.PedidoRequest;
 import com.rasengaComics.rasengaComics.dto.response.PedidoResponse;
 import com.rasengaComics.rasengaComics.dto.response.ApiResponse;
+import com.rasengaComics.rasengaComics.repositories.UsuarioRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,9 +22,11 @@ import java.util.stream.Collectors;
 public class PedidoController {
 
     private final PedidoService pedidoService;
+    private final UsuarioRepository usuarioRepository;
 
-    public PedidoController(PedidoService pedidoService) {
+    public PedidoController(PedidoService pedidoService, UsuarioRepository usuarioRepository) {
         this.pedidoService = pedidoService;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @PostMapping
@@ -55,9 +60,16 @@ public class PedidoController {
     @GetMapping("/usuario/{uid}")
     public ResponseEntity<?> obtenerPorUsuario(@PathVariable String uid) {
         try {
-            // Para este endpoint necesitaríamos inyectar UsuarioService
-            // Por ahora devolvemos 501
-            return ResponseEntity.status(501).body(new ApiResponse(false, "Endpoint no completamente implementado", null));
+            Usuario usuario = usuarioRepository.findById(uid).orElse(null);
+            if (usuario == null) {
+                return ResponseEntity.ok(List.of());
+            }
+
+            List<Pedido> pedidos = pedidoService.obtenerPorUsuario(usuario);
+            List<PedidoResponse> respuestas = pedidos.stream()
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(respuestas);
         } catch (Exception e) {
             return ResponseEntity.status(400).body(new ApiResponse(false, e.getMessage(), null));
         }
@@ -87,7 +99,35 @@ public class PedidoController {
         r.setFechaPedido(p.getFechaPedido());
         r.setEstado(p.getEstado());
         r.setCantidadDetalles(p.getDetalles() != null ? p.getDetalles().size() : 0);
+        r.setTotal(calcularTotal(p));
+        r.setItems(mapItems(p.getDetalles()));
         return r;
+    }
+
+    private Double calcularTotal(Pedido pedido) {
+        if (pedido.getTotal() != null) {
+            return pedido.getTotal();
+        }
+        if (pedido.getDetalles() == null) {
+            return 0.0;
+        }
+        return pedido.getDetalles().stream()
+                .mapToDouble(d -> d.getPrecioUnitario() * d.getCantidad())
+                .sum();
+    }
+
+    private List<PedidoResponse.Item> mapItems(List<DetallePedido> detalles) {
+        if (detalles == null) {
+            return List.of();
+        }
+        return detalles.stream().map(detalle -> {
+            PedidoResponse.Item item = new PedidoResponse.Item();
+            item.setProductoId(detalle.getProducto().getId());
+            item.setNombre(detalle.getProducto().getNombre());
+            item.setPrecio(detalle.getPrecioUnitario());
+            item.setCantidad(detalle.getCantidad());
+            return item;
+        }).collect(Collectors.toList());
     }
 }
 

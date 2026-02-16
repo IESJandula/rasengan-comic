@@ -1,0 +1,15 @@
+### Test Stripe Checkout Session
+POST http://localhost:8080/stripe/checkout-session
+Content-Type: application/json
+
+{
+  "usuarioUid": "test-uid-123",
+  "usuarioEmail": "test@example.com",
+  "usuarioNombre": "Usuario Test",
+  "items": [
+    {
+      "productoId": 1,
+      "cantidad": 1
+    }
+  ]
+}

@@ -1,13 +1,33 @@
 <template>
   <div class="profile-container">
-    <div class="profile-wrapper">
+    <!-- Loading de autenticación -->
+    <div v-if="authStore.loading" class="auth-loading">
+      <div class="loading-spinner"></div>
+      <p>Cargando perfil...</p>
+    </div>
+
+    <!-- Mensaje si no está autenticado -->
+    <div v-else-if="!authStore.isAuthenticated" class="not-authenticated">
+      <div class="auth-icon">🔒</div>
+      <h2>Acceso Restringido</h2>
+      <p>Necesitas iniciar sesión para ver tu perfil</p>
+      <router-link to="/login" class="login-btn">Iniciar Sesión</router-link>
+    </div>
+
+    <!-- Contenido del perfil -->
+    <div v-else class="profile-wrapper">
       <!-- Header del Perfil -->
       <div class="profile-header">
-        <img :src="user.avatar" :alt="user.name" class="profile-avatar" />
+        <div class="avatar-container">
+          <img v-if="user.avatar" :src="user.avatar" :alt="user.name" class="profile-avatar" />
+          <div v-else class="profile-avatar-default">
+            <span>{{ getInitials(user.name) }}</span>
+          </div>
+        </div>
         <div class="profile-info">
           <h1 class="profile-name">{{ user.name }}</h1>
           <p class="profile-email">{{ user.email }}</p>
-          <button @click="editProfile" class="edit-btn">Editar Perfil</button>
+          <button @click="showEditProfileModal = true" class="edit-btn">✏️ Editar Perfil</button>
         </div>
       </div>
 
@@ -77,23 +97,145 @@
           <button @click="savePreferences" class="save-preferences-btn">Guardar Preferencias</button>
         </div>
 
+        <!-- Mis compras -->
+        <div v-if="activeTab === 'Mis compras'" class="tab-pane">
+          <div v-if="comprasLoading" class="compras-loading">
+            <div class="loading-spinner"></div>
+            <p>Cargando tus compras...</p>
+          </div>
+          <div v-else-if="comprasError" class="compras-error">
+            <span class="error-icon">⚠️</span>
+            {{ comprasError }}
+          </div>
+          <div v-else-if="compras.length === 0" class="compras-empty">
+            <div class="empty-icon">🛍️</div>
+            <h3>Aún no has realizado compras</h3>
+            <p>Cuando realices tu primera compra, aparecerá aquí</p>
+            <router-link to="/catalogo" class="empty-action-btn">Ir a la tienda</router-link>
+          </div>
+          <div v-else class="compras-list">
+            <div class="compras-stats">
+              <div class="stat">
+                <span class="stat-label">Total de pedidos</span>
+                <span class="stat-value">{{ compras.length }}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Total gastado</span>
+                <span class="stat-value">{{ totalGastado.toFixed(2) }}€</span>
+              </div>
+            </div>
+            
+            <div v-for="pedido in compras" :key="pedido.id" class="compra-card">
+              <div class="compra-header">
+                <div class="compra-info">
+                  <div class="compra-title">
+                    <span class="pedido-icon">📦</span>
+                    <h3>Pedido #{{ pedido.id }}</h3>
+                  </div>
+                  <p class="compra-meta">
+                    <span class="compra-date">📅 {{ formatDate(pedido.fechaPedido) }}</span>
+                    <span :class="['compra-estado', getEstadoClass(pedido.estado)]">
+                      {{ getEstadoText(pedido.estado) }}
+                    </span>
+                  </p>
+                </div>
+                <div class="compra-total">
+                  <span class="total-label">Total</span>
+                  <span class="total-amount">{{ pedido.total.toFixed(2) }}€</span>
+                </div>
+              </div>
+              
+              <div class="compra-divider"></div>
+              
+              <div class="compra-items">
+                <div class="items-header">Productos</div>
+                <div v-for="item in pedido.items" :key="item.productoId" class="compra-item">
+                  <span class="item-name">{{ item.nombre }}</span>
+                  <span class="item-quantity">x{{ item.cantidad }}</span>
+                  <span class="item-price">{{ (item.precio * item.cantidad).toFixed(2) }}€</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Seguridad -->
         <div v-if="activeTab === 'Seguridad'" class="tab-pane">
           <div class="security-section">
             <h3>Cambiar Contraseña</h3>
+            <p v-if="passwordChangeSuccess" class="success-message">✓ Contraseña cambiada exitosamente</p>
+            <p v-if="passwordChangeError" class="error-message">✗ {{ passwordChangeError }}</p>
             <div class="form-group">
               <label>Contraseña Actual</label>
-              <input type="password" placeholder="••••••••" />
+              <input v-model="passwordForm.currentPassword" type="password" placeholder="••••••••" />
             </div>
             <div class="form-group">
               <label>Nueva Contraseña</label>
-              <input type="password" placeholder="••••••••" />
+              <input v-model="passwordForm.newPassword" type="password" placeholder="••••••••" />
             </div>
             <div class="form-group">
               <label>Confirmar Contraseña</label>
-              <input type="password" placeholder="••••••••" />
+              <input v-model="passwordForm.confirmPassword" type="password" placeholder="••••••••" />
             </div>
-            <button class="change-password-btn">Cambiar Contraseña</button>
+            <button @click="changePassword" class="change-password-btn" :disabled="passwordChangeLoading">
+              {{ passwordChangeLoading ? 'Cambiando...' : 'Cambiar Contraseña' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Editar Perfil -->
+      <div v-if="showEditProfileModal" class="modal-overlay" @click="showEditProfileModal = false">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h2>Editar Perfil</h2>
+            <button @click="showEditProfileModal = false" class="modal-close">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Nombre</label>
+              <input v-model="editForm.name" type="text" placeholder="Tu nombre" />
+            </div>
+            <div class="form-group">
+              <label>Teléfono</label>
+              <input v-model="editForm.phone" type="tel" placeholder="+34 123 456 789" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button @click="showEditProfileModal = false" class="btn-cancel">Cancelar</button>
+            <button @click="saveProfile" class="btn-save">Guardar Cambios</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Editar Dirección -->
+      <div v-if="showEditAddressModal" class="modal-overlay" @click="showEditAddressModal = false">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h2>Editar Dirección</h2>
+            <button @click="showEditAddressModal = false" class="modal-close">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Calle</label>
+              <input v-model="addressForm.street" type="text" placeholder="Calle Principal 123" />
+            </div>
+            <div class="form-group">
+              <label>Ciudad</label>
+              <input v-model="addressForm.city" type="text" placeholder="Madrid" />
+            </div>
+            <div class="form-group">
+              <label>Código Postal</label>
+              <input v-model="addressForm.zipCode" type="text" placeholder="28001" />
+            </div>
+            <div class="form-group">
+              <label>País</label>
+              <input v-model="addressForm.country" type="text" placeholder="España" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button @click="showEditAddressModal = false" class="btn-cancel">Cancelar</button>
+            <button @click="saveAddress" class="btn-save">Guardar Dirección</button>
           </div>
         </div>
       </div>
@@ -102,15 +244,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
+import { useCartStore } from '@/stores/cartStore'
+import { useRoute, useRouter } from 'vue-router'
+import api from '@/api/axios'
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth'
+import { auth } from '@/firebase'
 
 const authStore = useAuthStore()
+const cartStore = useCartStore()
+const route = useRoute()
+const router = useRouter()
 
 const activeTab = ref('Información Personal')
+const tabs = ['Información Personal', 'Dirección', 'Preferencias', 'Mis compras', 'Seguridad']
 
-const tabs = ['Información Personal', 'Dirección', 'Preferencias', 'Seguridad']
+// Estados de compras
+const compras = ref<any[]>([])
+const comprasLoading = ref(false)
+const comprasError = ref('')
 
+// Datos del usuario
 const user = ref({
   name: authStore.user?.name || 'Usuario',
   email: authStore.user?.email || '',
@@ -125,27 +280,236 @@ const user = ref({
   }
 })
 
+// Preferencias
 const preferences = ref({
   newsletter: true,
   notifications: true,
   sms: false
 })
 
-const editProfile = () => {
-  alert('Editar perfil')
+// Estados de modales
+const showEditProfileModal = ref(false)
+const showEditAddressModal = ref(false)
+
+// Formularios
+const editForm = ref({
+  name: user.value.name,
+  phone: user.value.phone
+})
+
+const addressForm = ref({
+  street: user.value.address.street,
+  city: user.value.address.city,
+  zipCode: user.value.address.zipCode,
+  country: user.value.address.country
+})
+
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+const passwordChangeLoading = ref(false)
+const passwordChangeSuccess = ref(false)
+const passwordChangeError = ref('')
+
+// Función para obtener iniciales
+const getInitials = (name: string) => {
+  if (!name) return 'U'
+  const names = name.split(' ')
+  if (names.length === 1) return names[0].charAt(0).toUpperCase()
+  return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase()
 }
 
+// Guardar perfil
+const saveProfile = () => {
+  user.value.name = editForm.value.name
+  user.value.phone = editForm.value.phone
+  showEditProfileModal.value = false
+  alert('✓ Perfil actualizado correctamente')
+}
+
+// Editar dirección
 const editAddress = () => {
-  alert('Editar dirección')
+  addressForm.value = {
+    street: user.value.address.street,
+    city: user.value.address.city,
+    zipCode: user.value.address.zipCode,
+    country: user.value.address.country
+  }
+  showEditAddressModal.value = true
 }
 
+// Guardar dirección
+const saveAddress = () => {
+  user.value.address = { ...addressForm.value }
+  showEditAddressModal.value = false
+  alert('✓ Dirección actualizada correctamente')
+}
+
+// Añadir dirección
 const addAddress = () => {
-  alert('Añadir dirección')
+  addressForm.value = {
+    street: '',
+    city: '',
+    zipCode: '',
+    country: 'España'
+  }
+  showEditAddressModal.value = true
 }
 
+// Guardar preferencias
 const savePreferences = () => {
-  alert('Preferencias guardadas')
+  alert('✓ Preferencias guardadas correctamente')
 }
+
+// Cambiar contraseña con Firebase
+const changePassword = async () => {
+  passwordChangeSuccess.value = false
+  passwordChangeError.value = ''
+
+  // Validaciones
+  if (!passwordForm.value.currentPassword || !passwordForm.value.newPassword || !passwordForm.value.confirmPassword) {
+    passwordChangeError.value = 'Todos los campos son obligatorios'
+    return
+  }
+
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    passwordChangeError.value = 'Las contraseñas nuevas no coinciden'
+    return
+  }
+
+  if (passwordForm.value.newPassword.length < 6) {
+    passwordChangeError.value = 'La nueva contraseña debe tener al menos 6 caracteres'
+    return
+  }
+
+  passwordChangeLoading.value = true
+
+  try {
+    const currentUser = auth.currentUser
+    if (!currentUser || !currentUser.email) {
+      passwordChangeError.value = 'No se pudo verificar el usuario'
+      return
+    }
+
+    // Reautenticar con la contraseña actual
+    const credential = EmailAuthProvider.credential(
+      currentUser.email,
+      passwordForm.value.currentPassword
+    )
+    await reauthenticateWithCredential(currentUser, credential)
+
+    // Actualizar la contraseña
+    await updatePassword(currentUser, passwordForm.value.newPassword)
+
+    passwordChangeSuccess.value = true
+    passwordForm.value = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
+
+    setTimeout(() => {
+      passwordChangeSuccess.value = false
+    }, 3000)
+  } catch (error: any) {
+    console.error('Error al cambiar contraseña:', error)
+    if (error.code === 'auth/wrong-password') {
+      passwordChangeError.value = 'La contraseña actual es incorrecta'
+    } else if (error.code === 'auth/weak-password') {
+      passwordChangeError.value = 'La contraseña es muy débil'
+    } else {
+      passwordChangeError.value = 'Error al cambiar la contraseña. Intenta de nuevo.'
+    }
+  } finally {
+    passwordChangeLoading.value = false
+  }
+}
+
+// Formateado de fechas
+const formatDate = (value: string) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString('es-ES', { 
+    day: '2-digit', 
+    month: 'long', 
+    year: 'numeric' 
+  })
+}
+
+// Estado helpers
+const getEstadoClass = (estado: string) => {
+  const estadoMap: Record<string, string> = {
+    'PAGADO': 'estado-pagado',
+    'PENDIENTE': 'estado-pendiente',
+    'ENVIADO': 'estado-enviado',
+    'ENTREGADO': 'estado-entregado',
+    'CANCELADO': 'estado-cancelado'
+  }
+  return estadoMap[estado] || 'estado-default'
+}
+
+const getEstadoText = (estado: string) => {
+  const estadoMap: Record<string, string> = {
+    'PAGADO': '✓ Pagado',
+    'PENDIENTE': '⏳ Pendiente',
+    'ENVIADO': '🚚 Enviado',
+    'ENTREGADO': '✓ Entregado',
+    'CANCELADO': '✗ Cancelado'
+  }
+  return estadoMap[estado] || estado
+}
+
+// Computed properties
+const totalGastado = computed(() => {
+  return compras.value.reduce((sum, pedido) => sum + (pedido.total || 0), 0)
+})
+
+// Cargar compras
+const loadCompras = async () => {
+  if (!authStore.user?.uid) {
+    return
+  }
+
+  comprasLoading.value = true
+  comprasError.value = ''
+
+  try {
+    const response = await api.get(`/pedidos/usuario/${authStore.user.uid}`)
+    compras.value = response.data
+  } catch (err) {
+    console.error('Error al cargar compras:', err)
+    comprasError.value = 'No se pudieron cargar las compras'
+  } finally {
+    comprasLoading.value = false
+  }
+}
+
+// Inicialización
+const initTabFromQuery = () => {
+  if (route.query.tab === 'compras') {
+    activeTab.value = 'Mis compras'
+  }
+}
+
+onMounted(() => {
+  initTabFromQuery()
+  if (route.query.checkout === 'success') {
+    cartStore.clearCart()
+  }
+  if (activeTab.value === 'Mis compras') {
+    loadCompras()
+  }
+})
+
+watch(activeTab, (value) => {
+  if (value === 'Mis compras' && compras.value.length === 0) {
+    loadCompras()
+  }
+})
 </script>
 
 <style scoped>
@@ -177,6 +541,189 @@ const savePreferences = () => {
   border-radius: 50%;
   border: 3px solid #dc2626;
   object-fit: cover;
+}
+
+.profile-avatar-default {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 3px solid #dc2626;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: bold;
+  color: white;
+}
+
+.auth-loading, .not-authenticated {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  gap: 20px;
+  text-align: center;
+}
+
+.auth-icon {
+  font-size: 80px;
+  opacity: 0.5;
+}
+
+.not-authenticated h2 {
+  color: #1f2937;
+  margin: 0;
+}
+
+.not-authenticated p {
+  color: #6b7280;
+  margin: 0;
+}
+
+.login-btn {
+  padding: 12px 30px;
+  background-color: #dc2626;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+  margin-top: 10px;
+}
+
+.login-btn:hover {
+  background-color: #b91c1c;
+}
+
+/* Modales */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 22px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #6b7280;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 25px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px 25px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-cancel, .btn-save {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.btn-cancel:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-save {
+  background-color: #dc2626;
+  color: white;
+}
+
+.btn-save:hover {
+  background-color: #b91c1c;
+}
+
+/* Mensajes */
+.success-message {
+  padding: 12px 16px;
+  background-color: #d1fae5;
+  color: #065f46;
+  border-radius: 6px;
+  border-left: 4px solid #10b981;
+  margin-bottom: 15px;
+}
+
+.error-message {
+  padding: 12px 16px;
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-radius: 6px;
+  border-left: 4px solid #dc2626;
+  margin-bottom: 15px;
 }
 
 .profile-info {
@@ -248,6 +795,279 @@ const savePreferences = () => {
 
 .tab-pane {
   animation: fadeIn 0.3s ease;
+}
+
+.compras-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 15px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f4f6;
+  border-top-color: #dc2626;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.compras-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #dc2626;
+  padding: 20px;
+  background-color: #fef2f2;
+  border-radius: 8px;
+  border-left: 4px solid #dc2626;
+}
+
+.error-icon {
+  font-size: 24px;
+}
+
+.compras-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 15px;
+}
+
+.empty-icon {
+  font-size: 80px;
+  opacity: 0.5;
+}
+
+.compras-empty h3 {
+  color: #1f2937;
+  margin: 0;
+}
+
+.compras-empty p {
+  color: #6b7280;
+  margin: 0;
+}
+
+.empty-action-btn {
+  margin-top: 10px;
+  padding: 12px 30px;
+  background-color: #dc2626;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.empty-action-btn:hover {
+  background-color: #b91c1c;
+}
+
+.compras-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.compras-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.stat {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  padding: 20px;
+  border-radius: 12px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 13px;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.compra-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.compra-card:hover {
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+}
+
+.compra-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px;
+  background: #f9fafb;
+}
+
+.compra-info {
+  flex: 1;
+}
+
+.compra-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.pedido-icon {
+  font-size: 24px;
+}
+
+.compra-title h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.compra-meta {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin: 0;
+}
+
+.compra-date {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.compra-estado {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.estado-pagado {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.estado-pendiente {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.estado-enviado {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.estado-entregado {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.estado-cancelado {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.compra-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.total-label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.total-amount {
+  font-size: 24px;
+  font-weight: 800;
+  color: #dc2626;
+}
+
+.compra-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 0 20px;
+}
+
+.compra-items {
+  padding: 20px;
+}
+
+.items-header {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.compra-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 15px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.compra-item:last-child {
+  margin-bottom: 0;
+}
+
+.item-name {
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.item-quantity {
+  color: #6b7280;
+  font-size: 14px;
+  padding: 4px 10px;
+  background: white;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.item-price {
+  color: #dc2626;
+  font-weight: 700;
+  min-width: 80px;
+  text-align: right;
 }
 
 @keyframes fadeIn {
