@@ -77,6 +77,7 @@
             </div>
             <router-link to="/perfil" class="dropdown-item">👤 Mi Perfil</router-link>
             <router-link to="/carrito" class="dropdown-item">🛒 Carrito</router-link>
+            <router-link to="/perfil?tab=compras" class="dropdown-item">🛍️ Mis Compras</router-link>
             <router-link to="/reservas" class="dropdown-item">📅 Mis Reservas</router-link>
             <router-link v-if="isAdmin" to="/admin" class="dropdown-item admin-link">⚙️ Admin Panel</router-link>
             <div class="dropdown-divider"></div>

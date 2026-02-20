@@ -25,6 +25,9 @@ public class Pedido {
 
     private LocalDateTime fechaPedido;
     private String estado;
+    private Double total;
+    private String stripeSessionId;
+    private String stripePaymentIntentId;
 
     @OneToMany(mappedBy = "pedido")
     private List<DetallePedido> detalles = new ArrayList<>();
@@ -62,6 +65,30 @@ public class Pedido {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public Double getTotal() {
+        return total;
+    }
+
+    public void setTotal(Double total) {
+        this.total = total;
+    }
+
+    public String getStripeSessionId() {
+        return stripeSessionId;
+    }
+
+    public void setStripeSessionId(String stripeSessionId) {
+        this.stripeSessionId = stripeSessionId;
+    }
+
+    public String getStripePaymentIntentId() {
+        return stripePaymentIntentId;
+    }
+
+    public void setStripePaymentIntentId(String stripePaymentIntentId) {
+        this.stripePaymentIntentId = stripePaymentIntentId;
     }
 
     public List<DetallePedido> getDetalles() {

@@ -86,6 +86,49 @@ public class PedidoService {
         return pedidoGuardado;
     }
 
+    public Pedido crearPedidoPagado(String usuarioUid,
+                                    List<com.rasengaComics.rasengaComics.dto.request.PedidoRequest.Item> items,
+                                    String stripeSessionId,
+                                    String stripePaymentIntentId) {
+        Optional<Pedido> existente = pedidoRepository.findByStripeSessionId(stripeSessionId);
+        if (existente.isPresent()) {
+            return existente.get();
+        }
+
+        Optional<Usuario> optUsuario = usuarioRepository.findById(usuarioUid);
+        if (optUsuario.isEmpty()) {
+            throw new IllegalArgumentException("Usuario no encontrado");
+        }
+
+        Usuario usuario = optUsuario.get();
+        Pedido pedido = new Pedido();
+        pedido.setUsuario(usuario);
+        pedido.setFechaPedido(LocalDateTime.now());
+        pedido.setEstado("PAGADO");
+        pedido.setStripeSessionId(stripeSessionId);
+        pedido.setStripePaymentIntentId(stripePaymentIntentId);
+
+        Pedido pedidoGuardado = pedidoRepository.save(pedido);
+        double total = 0.0;
+
+        for (com.rasengaComics.rasengaComics.dto.request.PedidoRequest.Item item : items) {
+            Optional<Producto> optProducto = productoRepository.findById(item.getProductoId());
+            if (optProducto.isPresent()) {
+                Producto producto = optProducto.get();
+                DetallePedido detalle = new DetallePedido();
+                detalle.setPedido(pedidoGuardado);
+                detalle.setProducto(producto);
+                detalle.setCantidad(item.getCantidad());
+                detalle.setPrecioUnitario(producto.getPrecio());
+                detallePedidoRepository.save(detalle);
+                total += producto.getPrecio() * item.getCantidad();
+            }
+        }
+
+        pedidoGuardado.setTotal(total);
+        return pedidoRepository.save(pedidoGuardado);
+    }
+
     // Actualizar estado
     public Pedido actualizarEstado(Long id, String nuevoEstado) {
         Optional<Pedido> optPedido = pedidoRepository.findById(id);

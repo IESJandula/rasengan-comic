@@ -121,6 +121,8 @@ import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import { loadStripe } from '@stripe/stripe-js'
+import api from '@/api/axios'
 
 const cartStore = useCartStore()
 const authStore = useAuthStore()
@@ -135,6 +137,7 @@ const total = computed(() => cartStore.total)
 
 const promoCode = ref('')
 const showAuthModal = ref(false)
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 
 const incrementQuantity = (itemId: number) => {
   cartStore.incrementQuantity(itemId)
@@ -157,12 +160,42 @@ const applyPromo = () => {
   promoCode.value = ''
 }
 
-const checkout = () => {
+const checkout = async () => {
   if (!authStore.isAuthenticated) {
     showAuthModal.value = true
     return
   }
-  alert('Ir a checkout')
+
+  if (!authStore.user?.uid) {
+    alert('No se pudo identificar el usuario')
+    return
+  }
+
+  try {
+    const payload = {
+      usuarioUid: authStore.user.uid,
+      usuarioEmail: authStore.user.email,
+      usuarioNombre: authStore.user.name,
+      items: cartItems.value.map((item) => ({
+        productoId: item.id,
+        cantidad: item.quantity
+      }))
+    }
+
+    const response = await api.post('/stripe/checkout-session', payload)
+    const { sessionId } = response.data
+
+    const stripe = await stripePromise
+    if (!stripe || !sessionId) {
+      alert('No se pudo iniciar el pago')
+      return
+    }
+
+    await stripe.redirectToCheckout({ sessionId })
+  } catch (err) {
+    console.error('Error al iniciar el pago:', err)
+    alert('No se pudo iniciar el pago')
+  }
 }
 
 const goToLogin = () => {
