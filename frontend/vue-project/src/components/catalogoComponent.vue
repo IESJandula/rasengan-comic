@@ -419,6 +419,17 @@
         </div>
       </main>
     </div>
+
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div v-if="showToast" class="toast-notification">
+        <div class="toast-icon">✅</div>
+        <div class="toast-content">
+          <h4 class="toast-title">¡Producto agregado!</h4>
+          <p class="toast-message">{{ toastMessage }}</p>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -457,6 +468,8 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const recentlyAddedProducts = ref<Set<number>>(new Set())
 const showFilters = ref(false)
+const showToast = ref(false)
+const toastMessage = ref('')
 
 // Función para toggle de filtros en móvil
 const toggleFilters = () => {
@@ -1129,7 +1142,11 @@ const addToCart = (productId: number) => {
   if (!product) return
   
   if (product.isReserve) {
-    alert(`✅ Reserva realizada para: ${product.name}`)
+    toastMessage.value = `Reserva realizada para: ${product.name}`
+    showToast.value = true
+    setTimeout(() => {
+      showToast.value = false
+    }, 3000)
   } else {
     cartStore.addToCart({
       id: product.id,
@@ -1138,6 +1155,13 @@ const addToCart = (productId: number) => {
       price: product.price,
       image: product.image
     })
+    
+    // Mostrar notificación toast
+    toastMessage.value = `${product.name}`
+    showToast.value = true
+    setTimeout(() => {
+      showToast.value = false
+    }, 3000)
     
     // Agregar producto a la lista de recientemente agregados
     recentlyAddedProducts.value.add(productId)
@@ -1861,6 +1885,88 @@ const viewProduct = (productId: number) => {
   .clear-filters-btn {
     padding: 10px;
     font-size: 14px;
+  }
+}
+
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  top: 100px;
+  right: 30px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 20px 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 9999;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.toast-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
+.toast-message {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.4;
+}
+
+/* Transiciones del toast */
+.toast-enter-active {
+  animation: toast-in 0.3s ease-out;
+}
+
+.toast-leave-active {
+  animation: toast-out 0.3s ease-in;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
+@media (max-width: 768px) {
+  .toast-notification {
+    top: 80px;
+    right: 15px;
+    left: 15px;
+    min-width: auto;
+    max-width: none;
   }
 }
 </style>

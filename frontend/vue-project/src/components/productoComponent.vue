@@ -125,6 +125,17 @@
       </div>
     </div>
 
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div v-if="showToast" class="toast-notification">
+        <div class="toast-icon">✅</div>
+        <div class="toast-content">
+          <h4 class="toast-title">¡Producto agregado!</h4>
+          <p class="toast-message">{{ toastMessage }}</p>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Productos relacionados -->
     <div v-if="relatedProducts.length > 0" class="related-products">
       <h2>Productos relacionados</h2>
@@ -154,6 +165,8 @@ const currentImage = ref('https://images.unsplash.com/photo-1612036782180-69db8e
 const loading = ref(true);
 const error = ref<string | null>(null);
 const relatedProducts = ref<any[]>([]);
+const showToast = ref(false);
+const toastMessage = ref('');
 
 const resolveImageUrl = (image?: string): string => {
   if (!image) return '';
@@ -280,7 +293,15 @@ const addToCart = () => {
     price: product.value.price,
     image: product.value.images[0]
   }, quantity.value);
-  alert(`✅ Agregado ${quantity.value} unidad(es) de ${product.value.name} al carrito`);
+  
+  // Mostrar notificación toast
+  toastMessage.value = `${quantity.value} unidad(es) de ${product.value.name}`;
+  showToast.value = true;
+  
+  // Ocultar después de 3 segundos
+  setTimeout(() => {
+    showToast.value = false;
+  }, 3000);
 };
 
 const viewProduct = (productId: number) => {
@@ -671,6 +692,78 @@ const viewProduct = (productId: number) => {
   margin: 0 12px 12px 12px;
 }
 
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  top: 100px;
+  right: 30px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 20px 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 9999;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.toast-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
+.toast-message {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.4;
+}
+
+/* Transiciones del toast */
+.toast-enter-active {
+  animation: toast-in 0.3s ease-out;
+}
+
+.toast-leave-active {
+  animation: toast-out 0.3s ease-in;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
 @media (max-width: 768px) {
   .product-detail-wrapper {
     grid-template-columns: 1fr;
@@ -688,6 +781,14 @@ const viewProduct = (productId: number) => {
 
   .products-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .toast-notification {
+    top: 80px;
+    right: 15px;
+    left: 15px;
+    min-width: auto;
+    max-width: none;
   }
 }
 </style>
