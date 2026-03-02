@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-RasengaComicsApplication<rasengaComics>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.rasengaComics.rasengaComics.RasengaComicsApplication",
+            "projectName": "rasengaComics",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

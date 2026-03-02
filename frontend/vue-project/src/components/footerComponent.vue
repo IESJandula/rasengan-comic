@@ -67,11 +67,11 @@
     <div class="footer-bottom">
       <p class="footer-copyright">&copy; 2025 Rasengan Comics. Todos los derechos reservados.</p>
       <div class="footer-policies">
-        <a href="#" class="footer-policy">Política de Privacidad</a>
+        <a href="/legalidad/privacidad" target="_blank" rel="noopener noreferrer" class="footer-policy">Política de Privacidad</a>
         <span class="policy-separator">|</span>
-        <a href="#" class="footer-policy">Términos y Condiciones</a>
+        <a href="/legalidad/terminos" target="_blank" rel="noopener noreferrer" class="footer-policy">Términos y Condiciones</a>
         <span class="policy-separator">|</span>
-        <a href="#" class="footer-policy">Cookies</a>
+        <a href="/legalidad/cookies" target="_blank" rel="noopener noreferrer" class="footer-policy">Cookies</a>
       </div>
     </div>
   </footer>
