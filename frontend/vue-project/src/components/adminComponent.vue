@@ -180,7 +180,6 @@
         <!-- Lista de Productos -->
         <div class="items-list">
           <div v-for="product in products" :key="product.id" class="item-card">
-            <img :src="product.image" :alt="product.name" class="item-image" />
             <div class="item-details">
               <h3>{{ product.name }}</h3>
               <p>${{ product.price }}</p>

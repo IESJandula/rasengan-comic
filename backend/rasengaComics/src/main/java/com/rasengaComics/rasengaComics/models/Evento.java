@@ -1,4 +1,5 @@
 package com.rasengaComics.rasengaComics.models;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -18,11 +19,14 @@ public class Evento {
     @Column(name = "fecha_hora", nullable = false)
     private LocalDateTime fechaHora;
 
-    @Column(name = "ubicacion", nullable = false)
+    @Column(name = "ubicacion")
     private String ubicacion;
 
     @Column(name = "imagen_url")
     private String imagenUrl;
+    
+    @Column(name = "tipo")
+    private String tipo;
     
     public Evento() {}
 
@@ -37,10 +41,18 @@ public class Evento {
 
     public LocalDateTime getFechaHora() { return fechaHora; }
     public void setFechaHora(LocalDateTime fechaHora) { this.fechaHora = fechaHora; }
+    
+    // Alias para compatibilidad con frontend
+    @JsonProperty("fecha")
+    public LocalDateTime getFecha() { return fechaHora; }
+    public void setFecha(LocalDateTime fecha) { this.fechaHora = fecha; }
 
     public String getUbicacion() { return ubicacion; }
     public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
 
     public String getImagenUrl() { return imagenUrl; }
     public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
+    
+    public String getTipo() { return tipo; }
+    public void setTipo(String tipo) { this.tipo = tipo; }
 }

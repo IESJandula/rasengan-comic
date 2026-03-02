@@ -32,7 +32,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/discounts/**").permitAll() // Permitir acceso a la API de descuentos
                     .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/productos/**").permitAll() // TEMP: permitir POST para pruebas
-                    .requestMatchers(HttpMethod.GET, "/eventos/**").permitAll() // Permitir lectura pública de eventos
+                    .requestMatchers("/eventos/**").permitAll() // Permitir acceso completo a eventos (GET, POST, PUT, DELETE)
                     .requestMatchers(HttpMethod.GET, "/reservas/**").permitAll() // Permitir lectura de reservas
                     .requestMatchers(HttpMethod.POST, "/stripe/webhook").permitAll()
                     .requestMatchers("/hola", "/public/**", "/auth/**", "/error").permitAll()
