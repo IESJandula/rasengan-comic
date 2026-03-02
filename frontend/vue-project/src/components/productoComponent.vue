@@ -128,22 +128,6 @@
       </div>
     </div>
 
-    <!-- Reseñas -->
-    <div class="reviews-section">
-      <h2>Reseñas de clientes</h2>
-      <div class="reviews-list">
-        <div v-for="review in reviews" :key="review.id" class="review-item">
-          <div class="review-header">
-            <div class="reviewer-info">
-              <h4 class="reviewer-name">{{ review.name }}</h4>
-            </div>
-            <span class="review-date">{{ review.date }}</span>
-          </div>
-          <p class="review-text">{{ review.text }}</p>
-        </div>
-      </div>
-    </div>
-
     <!-- Productos relacionados -->
     <div class="related-products">
       <h2>Productos relacionados</h2>
@@ -258,30 +242,6 @@ const loadProduct = async () => {
     loading.value = false;
   }
 };
-
-const reviews = [
-  {
-    id: 1,
-    name: 'Juan García',
-    rating: 5,
-    date: 'Hace 2 días',
-    text: 'Excelente calidad y entrega rápida. La edición especial es aún mejor de lo que esperaba.'
-  },
-  {
-    id: 2,
-    name: 'María López',
-    rating: 5,
-    date: 'Hace 1 semana',
-    text: 'Perfecto para un fan de One Piece. El póster desplegable es hermoso.'
-  },
-  {
-    id: 3,
-    name: 'Carlos Rodríguez',
-    rating: 4,
-    date: 'Hace 2 semanas',
-    text: 'Muy bueno, aunque llegó con un pequeño daño en la esquina. El servicio al cliente fue muy atento.'
-  }
-];
 
 const relatedProducts = [
   {
@@ -678,68 +638,6 @@ const viewProduct = (productId: number) => {
   color: #6b7280;
   margin: 0;
   font-size: 13px;
-}
-
-/* Reseñas */
-.reviews-section {
-  max-width: 1200px;
-  margin: 0 auto 60px;
-}
-
-.reviews-section h2 {
-  font-size: 24px;
-  font-weight: bold;
-  color: #1f2937;
-  margin: 0 0 30px 0;
-}
-
-.reviews-list {
-  display: grid;
-  gap: 20px;
-}
-
-.review-item {
-  background-color: white;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 15px;
-}
-
-.reviewer-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.reviewer-name {
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-  font-size: 16px;
-}
-
-.review-rating {
-  display: flex;
-  gap: 4px;
-  font-size: 16px;
-}
-
-.review-date {
-  color: #9ca3af;
-  font-size: 13px;
-}
-
-.review-text {
-  color: #6b7280;
-  line-height: 1.6;
-  margin: 0;
 }
 
 /* Productos relacionados */
