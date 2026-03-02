@@ -18,41 +18,6 @@
 
     <!-- Main Content -->
     <main class="admin-main">
-      <!-- Estadísticas -->
-      <div v-if="activeTab === 'Estadísticas'" class="admin-section">
-        <div class="stats-header">
-          <h1>📊 Panel de Estadísticas</h1>
-          <p class="stats-subtitle">Resumen general del sistema</p>
-        </div>
-        
-        <div class="stats-grid">
-          <div class="stat-card stat-card-productos">
-            <div class="stat-icon">📦</div>
-            <h3>Productos</h3>
-            <p class="stat-number">{{ estadisticas.totalProductos }}</p>
-            <p class="stat-label">Productos activos</p>
-          </div>
-          <div class="stat-card stat-card-usuarios">
-            <div class="stat-icon">👥</div>
-            <h3>Usuarios</h3>
-            <p class="stat-number">{{ estadisticas.totalUsuarios }}</p>
-            <p class="stat-label">Usuarios registrados</p>
-          </div>
-          <div class="stat-card stat-card-eventos">
-            <div class="stat-icon">🎉</div>
-            <h3>Eventos</h3>
-            <p class="stat-number">{{ estadisticas.totalEventos }}</p>
-            <p class="stat-label">Eventos programados</p>
-          </div>
-          <div class="stat-card stat-card-reservas">
-            <div class="stat-icon">🔖</div>
-            <h3>Reservas Activas</h3>
-            <p class="stat-number">{{ estadisticas.reservasActivas }}</p>
-            <p class="stat-label">Reservas pendientes</p>
-          </div>
-        </div>
-      </div>
-
       <!-- Reservas -->
       <div v-if="activeTab === 'Reservas'" class="admin-section">
         <h1>Gestión de Reservas de Clientes</h1>
@@ -164,7 +129,7 @@
       <div v-if="activeTab === 'Productos'" class="admin-section">
         <h1>Gestión de Productos</h1>
         
-        <button @click="showProductForm = true" class="add-btn">Añadir Producto</button>
+        <button @click="openProductForm()" class="add-btn">Añadir Producto</button>
 
         <!-- Formulario Producto -->
         <div v-if="showProductForm" class="form-modal">
@@ -173,13 +138,40 @@
             <form @submit.prevent="saveProduct">
               <input v-model="productForm.name" placeholder="Nombre del producto" required />
               <input v-model="productForm.category" placeholder="Categoría" required />
-              <input v-model.number="productForm.price" type="number" placeholder="Precio" required />
-              <input v-model.number="productForm.discount" type="number" placeholder="Descuento %" />
-              <textarea v-model="productForm.description" placeholder="Descripción"></textarea>
-              <input type="file" @change="handleImageUpload" accept="image/*" />
+              <input v-model="productForm.subcategory" placeholder="Subcategoría (opcional)" />
+              <input v-model.number="productForm.price" type="number" placeholder="Precio" step="0.01" required />
+              <input v-model.number="productForm.originalPrice" type="number" placeholder="Precio original (opcional)" step="0.01" />
+              <input v-model.number="productForm.discount" type="number" placeholder="Descuento %" min="0" max="100" />
+              
+              <div class="checkbox-group">
+                <label><input type="checkbox" v-model="productForm.available" /> Disponible</label>
+                <label><input type="checkbox" v-model="productForm.isNew" /> Producto Nuevo</label>
+                <label><input type="checkbox" v-model="productForm.isReserve" /> Es Reserva</label>
+              </div>
+              
+              <!-- Upload imagen -->
+              <div class="image-upload-section">
+                <label>📸 Imagen del Producto</label>
+                <input 
+                  type="file" 
+                  @change="handleImageUpload" 
+                  accept="image/*"
+                  :disabled="uploadingImage"
+                />
+                <p v-if="uploadingImage" class="uploading-text">⏳ Subiendo imagen...</p>
+                <div v-else-if="imagePreview" class="image-preview">
+                  <div class="preview-container">
+                    <img :src="imagePreview" :alt="productForm.name || 'Preview'" />
+                  </div>
+                </div>
+                <div v-else class="no-image-placeholder">
+                  <p>❌ Sin imagen seleccionada</p>
+                </div>
+              </div>
+              
               <div class="form-buttons">
-                <button type="submit" class="save-btn">Guardar</button>
-                <button type="button" @click="showProductForm = false" class="cancel-btn">Cancelar</button>
+                <button type="submit" class="save-btn" :disabled="uploadingImage">Guardar</button>
+                <button type="button" @click="closeProductForm()" class="cancel-btn">Cancelar</button>
               </div>
             </form>
           </div>
@@ -194,8 +186,8 @@
               <p>${{ product.price }}</p>
             </div>
             <div class="item-actions">
-              <button @click="editProductHandler(product)" class="edit-btn">✏️</button>
-              <button @click="deleteProductHandler(product.id)" class="delete-btn">🗑️</button>
+              <button @click="editProductHandler(product)" class="edit-btn">Editar</button>
+              <button @click="deleteProductHandler(product.id)" class="delete-btn">Borrar</button>
             </div>
           </div>
         </div>
@@ -205,7 +197,7 @@
       <div v-if="activeTab === 'Eventos'" class="admin-section">
         <h1>Gestión de Eventos</h1>
         
-        <button @click="showEventForm = true" class="add-btn">Crear Evento</button>
+        <button @click="openEventForm()" class="add-btn">Crear Evento</button>
 
         <!-- Formulario Evento -->
         <div v-if="showEventForm" class="form-modal">
@@ -223,7 +215,7 @@
               </select>
               <div class="form-buttons">
                 <button type="submit" class="save-btn">Guardar</button>
-                <button type="button" @click="showEventForm = false" class="cancel-btn">Cancelar</button>
+                <button type="button" @click="closeEventForm()" class="cancel-btn">Cancelar</button>
               </div>
             </form>
           </div>
@@ -238,8 +230,8 @@
               <p>{{ event.description }}</p>
             </div>
             <div class="item-actions">
-              <button @click="editEventHandler(event)" class="edit-btn">✏️</button>
-              <button @click="deleteEventHandler(event.id)" class="delete-btn">🗑️</button>
+              <button @click="editEventHandler(event)" class="edit-btn">Editar</button>
+              <button @click="deleteEventHandler(event.id)" class="delete-btn">Borrar</button>
             </div>
           </div>
         </div>
@@ -247,62 +239,188 @@
 
       <!-- Descuentos -->
       <div v-if="activeTab === 'Descuentos'" class="admin-section">
-        <h1>Gestión de Descuentos</h1>
-        
-        <button @click="showDiscountForm = true" class="add-btn">Crear Descuento</button>
+        <div class="discounts-section-admin">
+          <div class="section-header">
+            <h1>🎟️ Gestión de Códigos de Descuento</h1>
+            <button @click="openDiscountModal()" class="create-discount-btn">
+              <span class="btn-icon">+</span>
+              Crear Código de Descuento
+            </button>
+          </div>
 
-        <!-- Formulario Descuento -->
-        <div v-if="showDiscountForm" class="form-modal">
-          <div class="form-content">
-            <h2>{{ editingDiscount ? 'Editar' : 'Nuevo' }} Descuento</h2>
-            <form @submit.prevent="saveDiscount">
-              <input v-model="discountForm.code" placeholder="Código" required />
-              <input v-model.number="discountForm.percentage" type="number" placeholder="Porcentaje" required />
-              <input v-model="discountForm.description" placeholder="Descripción" required />
-              <input v-model="discountForm.expiryDate" type="date" required />
-              <div class="form-buttons">
-                <button type="submit" class="save-btn">Guardar</button>
-                <button type="button" @click="showDiscountForm = false" class="cancel-btn">Cancelar</button>
+          <div v-if="discountsLoading" class="discounts-loading">
+            <div class="loading-spinner"></div>
+            <p>Cargando códigos de descuento...</p>
+          </div>
+
+          <div v-else-if="discounts.length === 0" class="discounts-empty">
+            <div class="empty-icon">🎟️</div>
+            <h4>No hay códigos de descuento</h4>
+            <p>Crea tu primer código de descuento para empezar</p>
+          </div>
+
+          <div v-else class="discounts-list-admin">
+            <div v-for="discount in discounts" :key="discount.id" class="discount-card-admin">
+              <div class="discount-header-admin">
+                <div class="discount-code-badge-admin">🎟️ {{ discount.code }}</div>
+                <div class="discount-status-admin">
+                  <span :class="['status-badge-admin', discount.activo ? 'active' : 'inactive']">
+                    {{ discount.activo ? '✓ Activo' : '✗ Inactivo' }}
+                  </span>
+                </div>
+                <div class="discount-actions-admin">
+                  <button @click="editDiscount(discount)" class="action-btn-admin edit-btn" title="Editar">
+                    Editar
+                  </button>
+                  <button @click="deleteDiscount(discount.id)" class="action-btn-admin delete-btn" title="Eliminar">
+                    Borrar
+                  </button>
+                </div>
               </div>
-            </form>
+              <div class="discount-info-admin">
+                <div class="discount-item-admin">
+                  <span class="label">💰 Tipo:</span>
+                  <span class="value">{{ discount.type === 'percentage' ? 'Porcentaje' : 'Cantidad Fija' }}</span>
+                </div>
+                <div class="discount-item-admin">
+                  <span class="label">💵 Valor:</span>
+                  <span class="value discount-value-highlight">{{ discount.type === 'percentage' ? discount.value + '%' : discount.value + '€' }}</span>
+                </div>
+                <div class="discount-item-admin">
+                  <span class="label">🎯 Alcance:</span>
+                  <span class="value">{{ getScopeText(discount) }}</span>
+                </div>
+                <div v-if="discount.scopeValue" class="discount-item-admin">
+                  <span class="label">📌 Aplica a:</span>
+                  <span class="value">{{ discount.scopeValue }}</span>
+                </div>
+                <div class="discount-item-admin full-width">
+                  <span class="label">📅 Vigencia:</span>
+                  <span class="value">{{ formatDate(discount.startDate) }} - {{ formatDate(discount.endDate) }}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Lista de Descuentos -->
-        <div class="items-list">
-          <div v-for="discount in discounts" :key="discount.id" class="item-card">
-            <div class="item-details">
-              <h3>{{ discount.code }}</h3>
-              <p>{{ discount.percentage }}% - {{ discount.description }}</p>
-              <p class="expiry">Expira: {{ discount.expiryDate }}</p>
+        <!-- Modal Gestión de Descuentos -->
+        <div v-if="showDiscountModal" class="modal-overlay-admin" @click="showDiscountModal = false">
+          <div class="modal-content-admin discount-modal-admin" @click.stop>
+            <div class="modal-header-admin">
+              <h2>
+                <span class="modal-icon">🎟️</span>
+                {{ discountForm.id ? 'Editar Código de Descuento' : 'Crear Código de Descuento' }}
+              </h2>
+              <button @click="closeDiscountModal" class="modal-close-admin">✕</button>
             </div>
-            <div class="item-actions">
-              <button @click="editDiscountHandler(discount)" class="edit-btn">✏️</button>
-              <button @click="deleteDiscountHandler(discount.id)" class="delete-btn">🗑️</button>
+            <div class="modal-body-admin">
+              <!-- Código -->
+              <div class="form-group-admin">
+                <label class="required">🎟️ Código de Descuento</label>
+                <input 
+                  v-model="discountForm.code" 
+                  type="text" 
+                  placeholder="Ej: VERANO2024" 
+                  class="uppercase-input"
+                  maxlength="20"
+                />
+                <small class="form-hint">El código debe ser único y sin espacios</small>
+              </div>
+
+              <!-- Tipo y Valor -->
+              <div class="form-row-admin">
+                <div class="form-group-admin half">
+                  <label class="required">💰 Tipo de Descuento</label>
+                  <select v-model="discountForm.type" class="select-input-admin">
+                    <option value="percentage">Porcentaje (%)</option>
+                    <option value="fixed">Cantidad Fija (€)</option>
+                  </select>
+                </div>
+                <div class="form-group-admin half">
+                  <label class="required">💵 Valor del Descuento</label>
+                  <div class="input-with-suffix-admin">
+                    <input 
+                      v-model.number="discountForm.value" 
+                      type="number" 
+                      min="0" 
+                      :max="discountForm.type === 'percentage' ? 100 : 9999"
+                      step="0.01"
+                    />
+                    <span class="input-suffix-admin">{{ discountForm.type === 'percentage' ? '%' : '€' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fechas -->
+              <div class="form-row-admin">
+                <div class="form-group-admin half">
+                  <label class="required">📅 Fecha de Inicio</label>
+                  <input 
+                    v-model="discountForm.startDate" 
+                    type="date" 
+                    class="date-input-admin"
+                  />
+                </div>
+                <div class="form-group-admin half">
+                  <label class="required">📅 Fecha de Fin</label>
+                  <input 
+                    v-model="discountForm.endDate" 
+                    type="date" 
+                    class="date-input-admin"
+                  />
+                </div>
+              </div>
+
+              <!-- Alcance -->
+              <div class="form-group-admin">
+                <label class="required">🎯 Alcance del Descuento</label>
+                <select v-model="discountForm.scope" class="select-input-admin">
+                  <option value="global">🌍 Global (Todos los productos)</option>
+                  <option value="category">📦 Por Categoría</option>
+                  <option value="subcategory">📂 Por Subcategoría</option>
+                  <option value="product">🏷️ Producto Específico</option>
+                </select>
+              </div>
+
+              <!-- Selección según alcance -->
+              <div v-if="discountForm.scope === 'category'" class="form-group-admin">
+                <label class="required">Seleccionar Categoría</label>
+                <select v-model="discountForm.scopeValue" class="select-input-admin">
+                  <option value="">-- Selecciona una categoría --</option>
+                  <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+              </div>
+
+              <div v-if="discountForm.scope === 'subcategory'" class="form-group-admin">
+                <label class="required">Subcategoría</label>
+                <input 
+                  v-model="discountForm.scopeValue" 
+                  type="text" 
+                  placeholder="Ej: Yu-Gi-Oh, Shonen, etc."
+                />
+              </div>
+
+              <div v-if="discountForm.scope === 'product'" class="form-group-admin">
+                <label class="required">Producto</label>
+                <input 
+                  v-model="discountForm.scopeValue" 
+                  type="text" 
+                  placeholder="Buscar producto por nombre o ID"
+                />
+                <small class="form-hint">Puedes ingresar el ID del producto</small>
+              </div>
+            </div>
+            <div class="modal-footer-admin">
+              <button @click="closeDiscountModal" class="btn-cancel-admin">Cancelar</button>
+              <button @click="saveDiscount" class="btn-save-admin">
+                {{ discountForm.id ? 'Actualizar' : 'Crear' }} Código
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Usuarios -->
-      <div v-if="activeTab === 'Usuarios'" class="admin-section">
-        <h1>Gestión de Usuarios</h1>
-        
-        <div class="items-list">
-          <div v-for="user in users" :key="user.id" class="item-card">
-            <img :src="user.avatar" :alt="user.name" class="item-image" />
-            <div class="item-details">
-              <h3>{{ user.name }}</h3>
-              <p>{{ user.email }}</p>
-              <p class="join-date">Se unió: {{ user.joinDate }}</p>
-            </div>
-            <div class="item-actions">
-              <button @click="viewUserHandler(user)" class="view-btn">👁️</button>
-              <button @click="deleteUserHandler(user.id)" class="delete-btn">🗑️</button>
-            </div>
-          </div>
-        </div>
-      </div>
     </main>
   </div>
 
@@ -324,10 +442,16 @@ interface Product {
   id: number
   name: string
   category: string
+  subcategory?: string
   price: number
-  discount: number
-  description?: string
+  originalPrice?: number | null
+  discount?: number
   image: string
+  available: boolean
+  rating: number
+  reviews: number
+  isReserve: boolean
+  isNew: boolean
 }
 
 interface Event {
@@ -395,7 +519,7 @@ if (!isAdmin.value) {
 }
 
 const activeTab = ref('Estadísticas')
-const tabs = ['Estadísticas', 'Reservas', 'Productos', 'Eventos', 'Descuentos', 'Usuarios']
+const tabs = ['Reservas', 'Productos', 'Eventos', 'Descuentos']
 
 // Reservas Admin
 const activeReservaFilter = ref('todas')
@@ -421,23 +545,6 @@ const reservasActivas = computed(() => {
 })
 
 // Estadísticas desde la base de datos
-const estadisticas = ref({
-  totalProductos: 0,
-  totalUsuarios: 0,
-  totalEventos: 0,
-  reservasActivas: 0
-})
-
-const loadEstadisticas = async () => {
-  try {
-    const response = await api.get('/api/estadisticas')
-    estadisticas.value = response.data
-    console.log('✅ Estadísticas cargadas:', estadisticas.value)
-  } catch (err) {
-    console.error('❌ Error al cargar estadísticas:', err)
-  }
-}
-
 const loadProductos = async () => {
   try {
     const response = await api.get('/api/products')
@@ -445,14 +552,16 @@ const loadProductos = async () => {
       id: p.id,
       name: p.name,
       category: p.category,
-      price: p.price,
+      price: p.price || 0,
       discount: p.discount || 0,
       description: p.description || '',
-      image: p.image || 'https://via.placeholder.com/100'
+      image: p.image && p.image.trim() ? p.image : 'https://via.placeholder.com/150?text=Sin+imagen'
     }))
     console.log('✅ Productos cargados:', products.value.length)
+    console.log('📦 Primeros productos:', products.value.slice(0, 3))
   } catch (err) {
     console.error('❌ Error al cargar productos:', err)
+    products.value = []
   }
 }
 
@@ -470,22 +579,6 @@ const loadEventos = async () => {
     console.log('✅ Eventos cargados:', events.value.length)
   } catch (err) {
     console.error('❌ Error al cargar eventos:', err)
-  }
-}
-
-const loadUsuarios = async () => {
-  try {
-    const response = await api.get('/usuarios')
-    users.value = response.data.map((u: any) => ({
-      id: u.uid || u.id,
-      name: u.nombre || u.name,
-      email: u.email,
-      avatar: 'https://ui-avatars.com/api/?name=' + (u.nombre || u.name) + '&background=dc2626&color=fff',
-      joinDate: u.fechaCreacion ? new Date(u.fechaCreacion).toLocaleDateString('es-ES') : '2024-01-01'
-    }))
-    console.log('✅ Usuarios cargados:', users.value.length)
-  } catch (err) {
-    console.error('❌ Error al cargar usuarios:', err)
   }
 }
 
@@ -520,10 +613,8 @@ const loadReservas = async () => {
 }
 
 onMounted(() => {
-  loadEstadisticas()
   loadProductos()
   loadEventos()
-  loadUsuarios()
   loadReservas()
   loadDescuentos()
 })
@@ -592,16 +683,56 @@ const cancelarReservaAdmin = (reserva: ReservaAdmin): void => {
 // Productos
 const showProductForm = ref(false)
 const editingProduct = ref<Product | null>(null)
-const productForm = ref<Omit<Product, 'id'>>({ 
-  name: '', 
-  category: '', 
-  price: 0, 
-  discount: 0, 
-  description: '', 
-  image: '' 
+const productForm = ref({
+  name: '',
+  category: '',
+  subcategory: '',
+  price: 0,
+  originalPrice: null as number | null,
+  discount: 0,
+  image: '',
+  available: true,
+  rating: 0.0,
+  reviews: 0,
+  isReserve: false,
+  isNew: false
 })
+const imagePreview = ref<string | null>(null)
+const uploadingImage = ref(false)
 
 const products = ref<Product[]>([])
+
+// Función para resetear el formulario de productos
+const resetProductForm = (): void => {
+  productForm.value = {
+    name: '',
+    category: '',
+    subcategory: '',
+    price: 0,
+    originalPrice: null,
+    discount: 0,
+    image: '',
+    available: true,
+    rating: 0.0,
+    reviews: 0,
+    isReserve: false,
+    isNew: false
+  }
+  imagePreview.value = null
+  editingProduct.value = null
+}
+
+// Función para abrir el formulario de nuevo producto
+const openProductForm = (): void => {
+  resetProductForm()
+  showProductForm.value = true
+}
+
+// Función para cerrar el formulario
+const closeProductForm = (): void => {
+  showProductForm.value = false
+  resetProductForm()
+}
 
 // Eventos
 const showEventForm = ref(false)
@@ -616,46 +747,110 @@ const eventForm = ref<Omit<Event, 'id'>>({
 
 const events = ref<Event[]>([])
 
-// Descuentos
-const showDiscountForm = ref(false)
-const editingDiscount = ref<Discount | null>(null)
-const discountForm = ref<Omit<Discount, 'id'>>({ 
-  code: '', 
-  percentage: 0, 
-  description: '', 
-  expiryDate: '' 
-})
+// Función para resetear el formulario de eventos
+const resetEventForm = (): void => {
+  eventForm.value = { 
+    name: '', 
+    date: '', 
+    time: '', 
+    description: '', 
+    type: 'tournament' 
+  }
+  editingEvent.value = null
+}
 
-const discounts = ref<Discount[]>([])
+// Función para abrir formulario de nuevo evento
+const openEventForm = (): void => {
+  resetEventForm()
+  showEventForm.value = true
+}
+
+// Función para cerrar formulario de evento
+const closeEventForm = (): void => {
+  showEventForm.value = false
+  resetEventForm()
+}
+
+// Descuentos
+const showDiscountModal = ref(false)
+const discounts = ref<any[]>([])
+const discountsLoading = ref(false)
+const discountForm = ref({
+  id: null as number | null,
+  code: '',
+  type: 'percentage',
+  value: 0,
+  scope: 'global',
+  scopeValue: '',
+  startDate: '',
+  endDate: ''
+})
+const categories = ['TCG', 'Manga', 'Cómics', 'Merchandising', 'Accesorios']
 
 // Usuarios
-const users = ref<User[]>([])
-
 // Métodos Productos
 const saveProduct = async (): Promise<void> => {
   try {
+    // Validaciones
+    if (!productForm.value.name?.trim()) {
+      alert('⚠️ El nombre del producto es obligatorio')
+      return
+    }
+    
+    if (!productForm.value.category?.trim()) {
+      alert('⚠️ La categoría es obligatoria')
+      return
+    }
+    
+    if (!productForm.value.price || productForm.value.price <= 0) {
+      alert('⚠️ El precio debe ser mayor a 0')
+      return
+    }
+    
+    if (!productForm.value.image) {
+      alert('⚠️ Debes subir una imagen del producto')
+      return
+    }
+    
+    console.log('💾 Guardando producto...', productForm.value)
+    
     if (editingProduct.value) {
       // Actualizar producto existente
       await api.put(`/api/products/${editingProduct.value.id}`, productForm.value)
-      alert('Producto actualizado correctamente')
+      console.log('✅ Producto actualizado')
+      alert('✅ Producto actualizado correctamente')
     } else {
       // Crear nuevo producto
       await api.post('/api/products', productForm.value)
-      alert('Producto creado correctamente')
+      console.log('✅ Producto creado')
+      alert('✅ Producto creado correctamente')
     }
-    showProductForm.value = false
-    productForm.value = { name: '', category: '', price: 0, discount: 0, description: '', image: '' }
-    editingProduct.value = null
+    closeProductForm()
     await loadProductos()
-  } catch (err) {
+  } catch (err: any) {
     console.error('❌ Error al guardar producto:', err)
-    alert('Error al guardar el producto')
+    const errorMsg = err.response?.data?.message || err.message || 'Error desconocido'
+    alert(`❌ Error al guardar el producto: ${errorMsg}`)
   }
 }
 
 const editProductHandler = (product: Product): void => {
   editingProduct.value = product
-  productForm.value = { ...product }
+  productForm.value = {
+    name: product.name,
+    category: product.category,
+    subcategory: product.subcategory || '',
+    price: product.price,
+    originalPrice: product.originalPrice || null,
+    discount: product.discount || 0,
+    image: product.image,
+    available: product.available !== undefined ? product.available : true,
+    rating: product.rating || 0.0,
+    reviews: product.reviews || 0,
+    isReserve: product.isReserve || false,
+    isNew: product.isNew || false
+  }
+  imagePreview.value = product.image || null
   showProductForm.value = true
 }
 
@@ -672,8 +867,49 @@ const deleteProductHandler = async (id: number): Promise<void> => {
   }
 }
 
-const handleImageUpload = (): void => {
-  alert('Imagen cargada correctamente')
+const handleImageUpload = async (event: any): Promise<void> => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  
+  if (!file) return
+  
+  // Validar tipo
+  if (!file.type.startsWith('image/')) {
+    alert('⚠️ Por favor selecciona un archivo de imagen')
+    return
+  }
+  
+  // Validar tamaño (máx 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('⚠️ La imagen debe tener un tamaño máximo de 5MB')
+    return
+  }
+  
+  uploadingImage.value = true
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  try {
+    console.log('⏳ Subiendo imagen...', { nombre: file.name, tipo: file.type, tamaño: file.size })
+    const response = await api.post('/api/upload/image', formData)
+    
+    console.log('✅ Respuesta del servidor:', response.data)
+    
+    if (response.data?.url) {
+      productForm.value.image = response.data.url
+      imagePreview.value = response.data.url
+      console.log('✅ Imagen subida correctamente:', response.data.url)
+    } else {
+      console.error('❌ No hay URL en la respuesta:', response.data)
+      alert('❌ Error: El servidor no devolvió la URL de la imagen')
+    }
+  } catch (err: any) {
+    console.error('❌ Error al subir imagen:', err)
+    const errorMsg = err.response?.data?.message || err.message || 'Error desconocido'
+    alert(`❌ Error al subir la imagen: ${errorMsg}`)
+  } finally {
+    uploadingImage.value = false
+  }
 }
 
 // Métodos Eventos
@@ -700,9 +936,7 @@ const saveEvent = async (): Promise<void> => {
       await api.post('/eventos', eventoData)
       alert('Evento creado correctamente')
     }
-    showEventForm.value = false
-    eventForm.value = { name: '', date: '', time: '', description: '', type: 'tournament' }
-    editingEvent.value = null
+    closeEventForm()
     await loadEventos()
   } catch (err) {
     console.error('❌ Error al guardar evento:', err)
@@ -731,91 +965,143 @@ const deleteEventHandler = async (id: number): Promise<void> => {
 
 // Métodos Descuentos
 const loadDescuentos = async () => {
+  discountsLoading.value = true
   try {
-    const response = await api.get('/codigos-descuento')
-    discounts.value = response.data.map((d: any) => ({
-      id: d.id,
-      code: d.codigo || d.code,
-      percentage: d.porcentaje || d.percentage || 0,
-      description: d.descripcion || d.description || '',
-      expiryDate: d.fechaExpiracion ? new Date(d.fechaExpiracion).toISOString().split('T')[0] : ''
-    }))
+    const response = await api.get('/api/discounts')
+    discounts.value = response.data
     console.log('✅ Descuentos cargados:', discounts.value.length)
   } catch (err) {
     console.error('❌ Error al cargar descuentos:', err)
+  } finally {
+    discountsLoading.value = false
   }
 }
 
-const saveDiscount = async (): Promise<void> => {
+// Abrir modal para crear descuento
+const openDiscountModal = () => {
+  discountForm.value = {
+    id: null,
+    code: '',
+    type: 'percentage',
+    value: 0,
+    scope: 'global',
+    scopeValue: '',
+    startDate: '',
+    endDate: ''
+  }
+  showDiscountModal.value = true
+}
+
+// Editar descuento
+const editDiscount = (discount: any) => {
+  discountForm.value = {
+    id: discount.id,
+    code: discount.code,
+    type: discount.type,
+    value: discount.value,
+    scope: discount.scope,
+    scopeValue: discount.scopeValue || '',
+    startDate: discount.startDate,
+    endDate: discount.endDate
+  }
+  showDiscountModal.value = true
+}
+
+// Cerrar modal
+const closeDiscountModal = () => {
+  showDiscountModal.value = false
+  discountForm.value = {
+    id: null,
+    code: '',
+    type: 'percentage',
+    value: 0,
+    scope: 'global',
+    scopeValue: '',
+    startDate: '',
+    endDate: ''
+  }
+}
+
+// Guardar descuento
+const saveDiscount = async () => {
+  // Validaciones
+  if (!discountForm.value.code.trim()) {
+    alert('⚠️ El código de descuento es obligatorio')
+    return
+  }
+  
+  if (discountForm.value.value <= 0) {
+    alert('⚠️ El valor del descuento debe ser mayor a 0')
+    return
+  }
+  
+  if (!discountForm.value.startDate || !discountForm.value.endDate) {
+    alert('⚠️ Las fechas de inicio y fin son obligatorias')
+    return
+  }
+  
+  if (new Date(discountForm.value.startDate) > new Date(discountForm.value.endDate)) {
+    alert('⚠️ La fecha de inicio debe ser anterior a la fecha de fin')
+    return
+  }
+  
+  if (discountForm.value.scope !== 'global' && !discountForm.value.scopeValue.trim()) {
+    alert('⚠️ Debes seleccionar o especificar el alcance del descuento')
+    return
+  }
+
   try {
-    if (editingDiscount.value) {
-      // Actualizar descuento existente (solo DELETE y CREATE por ahora)
-      await api.delete(`/codigos-descuento/${editingDiscount.value.id}`)
-      const discountData = {
-        codigo: discountForm.value.code,
-        porcentaje: discountForm.value.percentage,
-        descripcion: discountForm.value.description,
-        fechaExpiracion: discountForm.value.expiryDate
-      }
-      await api.post('/codigos-descuento', discountData)
-      alert('Descuento actualizado correctamente')
+    if (discountForm.value.id) {
+      // Actualizar
+      await api.put(`/api/discounts/${discountForm.value.id}`, discountForm.value)
+      alert('✅ Código de descuento actualizado correctamente')
     } else {
-      // Crear nuevo descuento
-      const discountData = {
-        codigo: discountForm.value.code,
-        porcentaje: discountForm.value.percentage,
-        descripcion: discountForm.value.description,
-        fechaExpiracion: discountForm.value.expiryDate
-      }
-      await api.post('/codigos-descuento', discountData)
-      alert('Descuento creado correctamente')
+      // Crear
+      await api.post('/api/discounts', discountForm.value)
+      alert('✅ Código de descuento creado correctamente')
     }
-    showDiscountForm.value = false
-    discountForm.value = { code: '', percentage: 0, description: '', expiryDate: '' }
-    editingDiscount.value = null
+    
+    closeDiscountModal()
     await loadDescuentos()
-  } catch (err) {
-    console.error('❌ Error al guardar descuento:', err)
-    alert('Error al guardar el descuento')
+  } catch (error: any) {
+    console.error('Error al guardar descuento:', error)
+    alert('❌ Error al guardar el código de descuento: ' + (error.response?.data?.message || 'Error desconocido'))
   }
 }
 
-const editDiscountHandler = (discount: Discount): void => {
-  editingDiscount.value = discount
-  discountForm.value = { ...discount }
-  showDiscountForm.value = true
+// Eliminar descuento
+const deleteDiscount = async (id: number) => {
+  if (!confirm('¿Estás seguro de que deseas eliminar este código de descuento?')) {
+    return
+  }
+  
+  try {
+    await api.delete(`/api/discounts/${id}`)
+    alert('✅ Código de descuento eliminado correctamente')
+    await loadDescuentos()
+  } catch (error) {
+    console.error('Error al eliminar descuento:', error)
+    alert('❌ Error al eliminar el código de descuento')
+  }
 }
 
-const deleteDiscountHandler = async (id: number): Promise<void> => {
-  if (confirm('¿Está seguro de que desea eliminar este código de descuento?')) {
-    try {
-      await api.delete(`/codigos-descuento/${id}`)
-      alert('Descuento eliminado correctamente')
-      await loadDescuentos()
-    } catch (err) {
-      console.error('❌ Error al eliminar descuento:', err)
-      alert('Error al eliminar el descuento')
-    }
+// Obtener texto del alcance
+const getScopeText = (discount: any) => {
+  switch (discount.scope) {
+    case 'global':
+      return 'Todos los productos'
+    case 'category':
+      return `Categoría: ${discount.scopeValue}`
+    case 'subcategory':
+      return `Subcategoría: ${discount.scopeValue}`
+    case 'product':
+      return `Producto ID: ${discount.scopeValue}`
+    default:
+      return 'No especificado'
   }
 }
 
 // Métodos Usuarios
-const viewUserHandler = (user: User): void => {
-  alert(`Usuario: ${user.name}\nEmail: ${user.email}`)
-}
-
-const deleteUserHandler = async (id: number | string): Promise<void> => {
-  if (confirm('¿Está seguro de que desea eliminar este usuario?')) {
-    try {
-      await api.delete(`/usuarios/${id}`)
-      alert('Usuario eliminado correctamente')
-      await loadUsuarios()
-    } catch (err) {
-      console.error('❌ Error al eliminar usuario:', err)
-      alert('Error al eliminar el usuario')
-    }
-  }
-}
 </script>
 
 <style scoped>
@@ -1236,6 +1522,17 @@ const deleteUserHandler = async (id: number | string): Promise<void> => {
   font-family: inherit;
 }
 
+.form-content input[type="file"] {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.form-content input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .form-content input:focus,
 .form-content textarea:focus,
 .form-content select:focus {
@@ -1266,8 +1563,13 @@ const deleteUserHandler = async (id: number | string): Promise<void> => {
   color: white;
 }
 
-.save-btn:hover {
+.save-btn:hover:not(:disabled) {
   background-color: #b91c1c;
+}
+
+.save-btn:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
 }
 
 .cancel-btn {
@@ -1277,6 +1579,59 @@ const deleteUserHandler = async (id: number | string): Promise<void> => {
 
 .cancel-btn:hover {
   background-color: #d1d5db;
+}
+
+.image-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.image-upload-section label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.uploading-text {
+  color: #3b82f6;
+  font-size: 13px;
+  font-style: italic;
+  margin: 0;
+}
+
+.image-preview {
+  display: flex;
+  justify-content: center;
+  padding: 15px;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 2px solid #e5e7eb;
+}
+
+.preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 100%;
+}
+
+.preview-container img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 6px;
+  object-fit: contain;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.no-image-placeholder {
+  padding: 30px 15px;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  border: 2px dashed #d1d5db;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 .items-list {
@@ -1557,6 +1912,433 @@ const deleteUserHandler = async (id: number | string): Promise<void> => {
   .producto-img {
     width: 100%;
     height: 150px;
+  }
+}
+
+/* ==================== Estilos para Gestión de Descuentos ==================== */
+
+.discounts-section-admin {
+  width: 100%;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.section-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.create-discount-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.create-discount-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+}
+
+.btn-icon {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.discounts-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 20px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f4f6;
+  border-top-color: #dc2626;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.discounts-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.discounts-empty h4 {
+  font-size: 24px;
+  color: #1f2937;
+  margin-bottom: 10px;
+}
+
+.discounts-empty p {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.discounts-list-admin {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.discount-card-admin {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.discount-card-admin:hover {
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+  transform: translateY(-2px);
+}
+
+.discount-header-admin {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.discount-code-badge-admin {
+  font-size: 18px;
+  font-weight: 700;
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.discount-status-admin {
+  display: flex;
+  align-items: center;
+}
+
+.status-badge-admin {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-badge-admin.active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge-admin.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.discount-actions-admin {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn-admin {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.action-btn-admin:hover {
+  transform: scale(1.1);
+}
+
+.action-btn-admin.edit-btn:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.action-btn-admin.delete-btn:hover {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.discount-info-admin {
+  display: grid;
+  gap: 12px;
+}
+
+.discount-item-admin {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.discount-item-admin.full-width {
+  grid-column: 1 / -1;
+}
+
+.discount-item-admin .label {
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.discount-item-admin .value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 15px;
+}
+
+.discount-value-highlight {
+  color: #10b981 !important;
+  font-size: 18px !important;
+}
+
+/* Modal de Descuentos */
+.modal-overlay-admin {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content-admin {
+  background: white;
+  border-radius: 16px;
+  max-width: 650px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header-admin {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.modal-header-admin h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 22px;
+  color: #1f2937;
+}
+
+.modal-icon {
+  font-size: 28px;
+}
+
+.modal-close-admin {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal-close-admin:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.modal-body-admin {
+  padding: 24px;
+}
+
+.form-group-admin {
+  margin-bottom: 20px;
+}
+
+.form-group-admin.half {
+  margin-bottom: 0;
+}
+
+.form-group-admin label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.form-group-admin label.required::after {
+  content: ' *';
+  color: #dc2626;
+}
+
+.form-group-admin input[type="text"],
+.form-group-admin input[type="number"],
+.form-group-admin input[type="date"],
+.select-input-admin {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.form-group-admin input:focus,
+.select-input-admin:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.form-row-admin {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.input-with-suffix-admin {
+  position: relative;
+}
+
+.input-with-suffix-admin input {
+  padding-right: 50px;
+}
+
+.input-suffix-admin {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.modal-footer-admin {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.btn-cancel-admin {
+  padding: 12px 24px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-admin:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.btn-save-admin {
+  padding: 12px 24px;
+  border: none;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  color: white;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.btn-save-admin:hover {
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .discounts-list-admin {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row-admin {
+    grid-template-columns: 1fr;
+  }
+
+  .discount-header-admin {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

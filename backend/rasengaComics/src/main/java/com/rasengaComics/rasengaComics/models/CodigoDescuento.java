@@ -11,21 +11,40 @@ public class CodigoDescuento {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String codigo;
-    private Double porcentaje;
-    private Integer cantidadUsos;
-    private Integer usosRestantes;
-    private LocalDateTime fechaVencimiento;
-    private Boolean activo;
+    @Column(nullable = false, unique = true)
+    private String code;
+
+    @Column(nullable = false)
+    private String type; // "percentage" o "fixed"
+
+    @Column(nullable = false)
+    private Double value;
+
+    @Column(nullable = false)
+    private String scope; // "global", "category", "subcategory", "product"
+
+    private String scopeValue; // ID o nombre del producto, categoría o subcategoría
+
+    @Column(nullable = false)
+    private LocalDateTime startDate;
+
+    @Column(nullable = false)
+    private LocalDateTime endDate;
+
+    @Column(nullable = false)
+    private Boolean activo = true;
 
     public CodigoDescuento() {}
 
-    public CodigoDescuento(String codigo, Double porcentaje, Integer cantidadUsos, LocalDateTime fechaVencimiento) {
-        this.codigo = codigo;
-        this.porcentaje = porcentaje;
-        this.cantidadUsos = cantidadUsos;
-        this.usosRestantes = cantidadUsos;
-        this.fechaVencimiento = fechaVencimiento;
+    public CodigoDescuento(String code, String type, Double value, String scope, String scopeValue, 
+                           LocalDateTime startDate, LocalDateTime endDate) {
+        this.code = code;
+        this.type = type;
+        this.value = value;
+        this.scope = scope;
+        this.scopeValue = scopeValue;
+        this.startDate = startDate;
+        this.endDate = endDate;
         this.activo = true;
     }
 
@@ -38,44 +57,60 @@ public class CodigoDescuento {
         this.id = id;
     }
 
-    public String getCodigo() {
-        return codigo;
+    public String getCode() {
+        return code;
     }
 
-    public void setCodigo(String codigo) {
-        this.codigo = codigo;
+    public void setCode(String code) {
+        this.code = code;
     }
 
-    public Double getPorcentaje() {
-        return porcentaje;
+    public String getType() {
+        return type;
     }
 
-    public void setPorcentaje(Double porcentaje) {
-        this.porcentaje = porcentaje;
+    public void setType(String type) {
+        this.type = type;
     }
 
-    public Integer getCantidadUsos() {
-        return cantidadUsos;
+    public Double getValue() {
+        return value;
     }
 
-    public void setCantidadUsos(Integer cantidadUsos) {
-        this.cantidadUsos = cantidadUsos;
+    public void setValue(Double value) {
+        this.value = value;
     }
 
-    public Integer getUsosRestantes() {
-        return usosRestantes;
+    public String getScope() {
+        return scope;
     }
 
-    public void setUsosRestantes(Integer usosRestantes) {
-        this.usosRestantes = usosRestantes;
+    public void setScope(String scope) {
+        this.scope = scope;
     }
 
-    public LocalDateTime getFechaVencimiento() {
-        return fechaVencimiento;
+    public String getScopeValue() {
+        return scopeValue;
     }
 
-    public void setFechaVencimiento(LocalDateTime fechaVencimiento) {
-        this.fechaVencimiento = fechaVencimiento;
+    public void setScopeValue(String scopeValue) {
+        this.scopeValue = scopeValue;
+    }
+
+    public LocalDateTime getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDateTime getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
     }
 
     public Boolean getActivo() {

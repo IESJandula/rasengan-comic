@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/products/**").permitAll() // Permitir acceso público a la API de productos
+                    .requestMatchers("/api/discounts/**").permitAll() // Permitir acceso a la API de descuentos
                     .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/productos/**").permitAll() // TEMP: permitir POST para pruebas
                     .requestMatchers(HttpMethod.GET, "/eventos/**").permitAll() // Permitir lectura pública de eventos

@@ -27,7 +27,7 @@
         <div class="profile-info">
           <h1 class="profile-name">{{ user.name }}</h1>
           <p class="profile-email">{{ user.email }}</p>
-          <button @click="showEditProfileModal = true" class="edit-btn">✏️ Editar Perfil</button>
+          <button @click="showEditProfileModal = true" class="edit-btn">Editar Perfil</button>
         </div>
       </div>
 
@@ -267,7 +267,11 @@ const route = useRoute()
 const router = useRouter()
 
 const activeTab = ref('Información Personal')
-const tabs = ['Información Personal', 'Dirección', 'Preferencias', 'Mis compras', 'Seguridad']
+const isAdmin = ref(true) // TODO: Obtener del backend
+const tabs = computed(() => {
+  const baseTabs = ['Información Personal', 'Dirección', 'Preferencias', 'Mis compras', 'Seguridad']
+  return baseTabs
+})
 
 // Estados de compras
 const compras = ref<any[]>([])
@@ -299,6 +303,14 @@ const preferences = ref({
 // Estados de modales
 const showEditProfileModal = ref(false)
 const showEditAddressModal = ref(false)
+// Gestión de Descuentos (variables que se pueden eliminar)
+// const showDiscountModal = ref(false)
+// const discounts = ref<any[]>([])
+// const discountsLoading = ref(false)
+// const discountForm = ref({...})
+
+const categories = ['TCG', 'Manga', 'Cómics', 'Merchandising', 'Accesorios']
+const products = ref<any[]>([])
 
 // Formularios
 const editForm = ref({
@@ -326,9 +338,10 @@ const passwordChangeError = ref('')
 // Función para obtener iniciales
 const getInitials = (name: string) => {
   if (!name) return 'U'
-  const names = name.split(' ')
-  if (names.length === 1) return names[0].charAt(0).toUpperCase()
-  return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase()
+  const names = name.split(' ').filter(n => n.length > 0)
+  if (names.length === 0) return 'U'
+  if (names.length === 1) return (names[0] || '').charAt(0).toUpperCase()
+  return ((names[0] || '').charAt(0) + (names[names.length - 1] || '').charAt(0)).toUpperCase()
 }
 
 // Guardar perfil
@@ -504,6 +517,9 @@ const initTabFromQuery = () => {
   }
 }
 
+// ==================== Gestión de Descuentos ====================
+
+// Cargar descuentos
 // Mostrar mensaje de éxito después de pago
 const showSuccessMessage = ref(false)
 
@@ -1319,6 +1335,296 @@ watch(activeTab, (value) => {
   background-color: #b91c1c;
 }
 
+/* ==================== Gestión de Descuentos ==================== */
+
+.discounts-section {
+  width: 100%;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.section-header h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.create-discount-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.create-discount-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+.btn-icon {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.discounts-loading,
+.discounts-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.discounts-loading .loading-spinner {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 20px;
+  border: 4px solid #f3f4f6;
+  border-top-color: #dc2626;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.discounts-empty .empty-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.discounts-empty h4 {
+  font-size: 20px;
+  color: #374151;
+  margin: 0 0 10px 0;
+}
+
+.discounts-empty p {
+  color: #6b7280;
+  margin: 0;
+}
+
+.discounts-list {
+  display: grid;
+  gap: 20px;
+}
+
+.discount-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.discount-card:hover {
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+}
+
+.discount-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.discount-code-badge {
+  font-size: 18px;
+  font-weight: 700;
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.discount-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.edit-btn:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.delete-btn:hover {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.discount-info {
+  display: grid;
+  gap: 12px;
+}
+
+.discount-info > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.discount-info .label {
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.discount-info .value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 15px;
+}
+
+.discount-value .value {
+  color: #10b981;
+  font-size: 18px;
+}
+
+.discount-dates {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.date-item {
+  background: #f9fafb;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+/* Modal de Descuentos */
+.discount-modal {
+  max-width: 650px;
+}
+
+.discount-modal .modal-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.modal-icon {
+  font-size: 28px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group.half {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.form-group label.required::after {
+  content: ' *';
+  color: #dc2626;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+.select-input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 38px;
+}
+
+.input-with-suffix {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-suffix input {
+  padding-right: 45px;
+}
+
+.input-suffix {
+  position: absolute;
+  right: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.date-input {
+  cursor: pointer;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #6b7280;
+  font-style: italic;
+}
+
 @media (max-width: 768px) {
   .profile-header {
     flex-direction: column;
@@ -1336,6 +1642,29 @@ watch(activeTab, (value) => {
 
   .info-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .create-discount-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  
+  .form-group.half {
+    margin-bottom: 20px;
+  }
+  
+  .discount-modal {
+    max-width: 95%;
   }
 }
 </style>

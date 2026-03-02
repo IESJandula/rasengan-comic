@@ -3,9 +3,7 @@ import { auth } from '@/firebase'
 
 const api = axios.create({
   baseURL: 'http://localhost:8080',
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  timeout: 30000
 })
 
 api.interceptors.request.use(async (config) => {
@@ -15,6 +13,12 @@ api.interceptors.request.use(async (config) => {
     config.headers = config.headers ?? {}
     ;(config.headers as Record<string, string>).Authorization = `Bearer ${token}`
   }
+  
+  // No establecer Content-Type para FormData - dejar que el navegador lo haga
+  if (!(config.data instanceof FormData)) {
+    config.headers['Content-Type'] = 'application/json'
+  }
+  
   return config
 })
 
