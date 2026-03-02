@@ -96,9 +96,6 @@
             🛒 {{ product.available ? 'Agregar al Carrito' : 'No Disponible' }}
           </button>
 
-          <button @click="addToWishlist" class="wishlist-btn">
-            {{ isInWishlist ? '❤️' : '🤍' }}
-          </button>
         </div>
 
         <!-- Información adicional -->
@@ -129,14 +126,13 @@
     </div>
 
     <!-- Productos relacionados -->
-    <div class="related-products">
+    <div v-if="relatedProducts.length > 0" class="related-products">
       <h2>Productos relacionados</h2>
       <div class="products-grid">
-        <div v-for="relProduct in relatedProducts" :key="relProduct.id" class="product-card">
+        <div v-for="relProduct in relatedProducts" :key="relProduct.id" class="product-card" @click="viewProduct(relProduct.id)">
           <img :src="relProduct.image" :alt="relProduct.name" />
           <h4>{{ relProduct.name }}</h4>
           <p class="price">{{ relProduct.price }}€</p>
-          <button class="view-btn" @click="viewProduct(relProduct.id)">Ver detalles</button>
         </div>
       </div>
     </div>
@@ -144,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCartStore } from '@/stores/cartStore';
 import api from '../api/axios';
@@ -154,10 +150,10 @@ const route = useRoute();
 const cartStore = useCartStore();
 
 const quantity = ref(1);
-const isInWishlist = ref(false);
 const currentImage = ref('https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=600&h=800&fit=crop');
 const loading = ref(true);
 const error = ref<string | null>(null);
+const relatedProducts = ref<any[]>([]);
 
 const resolveImageUrl = (image?: string): string => {
   if (!image) return '';
@@ -235,6 +231,9 @@ const loadProduct = async () => {
     if (product.value.images.length > 0) {
       currentImage.value = product.value.images[0];
     }
+    
+    // Cargar productos relacionados de la misma categoría
+    await loadRelatedProducts();
   } catch (err) {
     console.error('Error cargando el producto:', err);
     error.value = 'No se pudo cargar el producto. Por favor, intenta más tarde.';
@@ -243,34 +242,33 @@ const loadProduct = async () => {
   }
 };
 
-const relatedProducts = [
-  {
-    id: 2,
-    name: 'One Piece Vol. 99',
-    price: 12.99,
-    image: 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=400&h=500&fit=crop'
-  },
-  {
-    id: 3,
-    name: 'Attack on Titan Vol. 1',
-    price: 11.99,
-    image: 'https://images.unsplash.com/photo-1594743315886-a18d195ce546?w=400&h=500&fit=crop'
-  },
-  {
-    id: 4,
-    name: 'Naruto Vol. 72',
-    price: 10.99,
-    image: 'https://images.unsplash.com/photo-1535016120754-fd45c1d1ff97?w=400&h=500&fit=crop'
-  },
-  {
-    id: 5,
-    name: 'Demon Slayer Vol. 1',
-    price: 13.99,
-    image: 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=400&h=500&fit=crop'
+const loadRelatedProducts = async () => {
+  try {
+    const response = await api.get(`/api/products/category/${encodeURIComponent(product.value.category)}`);
+    
+    // Filtrar el producto actual y limitar a 4 productos
+    relatedProducts.value = response.data
+      .filter((p: any) => p.id !== product.value.id)
+      .slice(0, 4)
+      .map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        image: resolveImageUrl(p.image)
+      }));
+  } catch (err) {
+    console.error('Error cargando productos relacionados:', err);
+    // Si falla, dejar el array vacío
+    relatedProducts.value = [];
   }
-];
+};
 
 onMounted(() => {
+  loadProduct();
+});
+
+// Observar cambios en la ruta para recargar el producto
+watch(() => route.params.id, () => {
   loadProduct();
 });
 
@@ -285,14 +283,9 @@ const addToCart = () => {
   alert(`✅ Agregado ${quantity.value} unidad(es) de ${product.value.name} al carrito`);
 };
 
-const addToWishlist = () => {
-  isInWishlist.value = !isInWishlist.value;
-  alert(isInWishlist.value ? '❤️ Agregado a favoritos' : '🤍 Removido de favoritos');
-};
-
 const viewProduct = (productId: number) => {
   router.push(`/producto/${productId}`);
-  window.scrollTo(0, 0); // Scroll al inicio de la página
+  window.scrollTo(0, 0);
 };
 </script>
 
@@ -592,21 +585,6 @@ const viewProduct = (productId: number) => {
   cursor: not-allowed;
 }
 
-.wishlist-btn {
-  padding: 12px;
-  border: 2px solid #e5e7eb;
-  background-color: white;
-  border-radius: 8px;
-  font-size: 20px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.wishlist-btn:hover {
-  border-color: #dc2626;
-  background-color: #fef2f2;
-}
-
 .additional-info {
   display: flex;
   flex-direction: column;
@@ -664,11 +642,13 @@ const viewProduct = (productId: number) => {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
 }
 
 .product-card:hover {
   transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .product-card img {
@@ -688,24 +668,7 @@ const viewProduct = (productId: number) => {
 .product-card .price {
   color: #dc2626;
   font-weight: bold;
-  margin: 0 12px;
-}
-
-.view-btn {
-  width: calc(100% - 24px);
-  margin: 12px;
-  padding: 10px;
-  background-color: #dc2626;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.view-btn:hover {
-  background-color: #b91c1c;
+  margin: 0 12px 12px 12px;
 }
 
 @media (max-width: 768px) {
