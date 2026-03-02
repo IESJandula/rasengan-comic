@@ -815,29 +815,42 @@ onBeforeUnmount(() => {
 .carousel-wrapper {
   position: relative;
   width: 100%;
-  height: 450px;
+  height: 500px;
   overflow: hidden;
   background-color: #1f2937;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 40px;
 }
 
 .carousel-container {
   position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .carousel-image {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   opacity: 0;
   transition: opacity 1s ease-in-out;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .carousel-image.active {
   opacity: 1;
+  z-index: 1;
 }
 
 .carousel-button {
@@ -1264,7 +1277,7 @@ onBeforeUnmount(() => {
 /* Responsive */
 @media (max-width: 1024px) {
   .carousel-wrapper {
-    height: 350px;
+    height: 400px;
   }
 
   .section-title {
@@ -1284,7 +1297,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .carousel-wrapper {
-    height: 300px;
+    height: 350px;
   }
 
   .content-wrapper {
@@ -1333,7 +1346,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 480px) {
   .carousel-wrapper {
-    height: 250px;
+    height: 280px;
   }
 
   .carousel-button {
