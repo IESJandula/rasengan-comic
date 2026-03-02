@@ -161,17 +161,49 @@ const applyPromo = () => {
 }
 
 const checkout = async () => {
+  console.log('🚀 Iniciando checkout...')
+  console.log('Usuario autenticado:', authStore.isAuthenticated)
+  console.log('Usuario data:', authStore.user)
+  
   if (!authStore.isAuthenticated) {
+    console.log('❌ Usuario no autenticado - mostrando modal')
     showAuthModal.value = true
     return
   }
 
   if (!authStore.user?.uid) {
+    console.error('❌ No se encontró el UID del usuario')
     alert('No se pudo identificar el usuario')
     return
   }
 
+  if (cartItems.value.length === 0) {
+    alert('El carrito está vacío')
+    return
+  }
+
+  console.log('✅ Usuario válido, preparando payload...')
+  console.log('📦 Items en el carrito:', cartItems.value.map(item => ({ id: item.id, name: item.name, quantity: item.quantity })))
+
   try {
+    // Validar que todos los productos existen antes de enviar
+    console.log('🔍 Validando productos en el servidor...')
+    const productIds = cartItems.value.map(item => item.id)
+    const validationResponse = await api.get('/api/products')
+    const validProductIds = new Set(validationResponse.data.map((p: any) => p.id))
+    
+    const invalidProducts = productIds.filter(id => !validProductIds.has(id))
+    if (invalidProducts.length > 0) {
+      alert(`Error: Los siguientes productos ya no están disponibles: ${invalidProducts.join(', ')}. Por favor, actualiza tu carrito.`)
+      // Limpiar productos inválidos del carrito
+      cartItems.value.forEach(item => {
+        if (invalidProducts.includes(item.id)) {
+          cartStore.removeItem(item.id)
+        }
+      })
+      return
+    }
+
     const payload = {
       usuarioUid: authStore.user.uid,
       usuarioEmail: authStore.user.email,
@@ -182,19 +214,44 @@ const checkout = async () => {
       }))
     }
 
+    console.log('📦 Payload a enviar:', payload)
+    console.log('🌐 Enviando petición a /stripe/checkout-session...')
+
     const response = await api.post('/stripe/checkout-session', payload)
+    
+    console.log('📨 Respuesta del servidor:', response.data)
     const { sessionId } = response.data
 
-    const stripe = await stripePromise
-    if (!stripe || !sessionId) {
-      alert('No se pudo iniciar el pago')
+    if (!sessionId) {
+      console.error('❌ No se recibió sessionId del servidor')
+      alert('No se pudo iniciar el pago - Sin session ID')
       return
     }
 
+    console.log('🔑 SessionId recibido:', sessionId)
+    console.log('💳 Cargando Stripe...')
+
+    const stripe = await stripePromise
+    
+    if (!stripe) {
+      console.error('❌ No se pudo cargar Stripe')
+      alert('No se pudo iniciar el pago - Error al cargar Stripe')
+      return
+    }
+
+    console.log('✅ Stripe cargado, redirigiendo al checkout...')
     await stripe.redirectToCheckout({ sessionId })
-  } catch (err) {
-    console.error('Error al iniciar el pago:', err)
-    alert('No se pudo iniciar el pago')
+  } catch (err: any) {
+    console.error('❌ Error al iniciar el pago:', err)
+    console.error('Error completo:', err.response?.data || err.message)
+    
+    if (err.response?.data?.message) {
+      alert(`No se pudo iniciar el pago: ${err.response.data.message}`)
+    } else if (err.message) {
+      alert(`No se pudo iniciar el pago: ${err.message}`)
+    } else {
+      alert('No se pudo iniciar el pago. Por favor, intenta nuevamente.')
+    }
   }
 }
 

@@ -37,6 +37,31 @@ const saveCartToStorage = (items: CartItem[]) => {
 export const useCartStore = defineStore('cart', () => {
   const items = ref<CartItem[]>(loadCartFromStorage())
 
+  // Validar productos del carrito al iniciar
+  const validateCartItems = async () => {
+    try {
+      console.log('🔍 Validando productos en el carrito...')
+      const response = await api.get('/api/products')
+      const validProductIds = new Set(response.data.map((p: any) => p.id))
+      
+      const invalidItems = items.value.filter(item => !validProductIds.has(item.id))
+      
+      if (invalidItems.length > 0) {
+        console.warn('⚠️ Productos inválidos encontrados en el carrito:', invalidItems.map(i => i.id))
+        items.value = items.value.filter(item => validProductIds.has(item.id))
+        saveCartToStorage(items.value)
+        console.log('✅ Carrito limpiado de productos inválidos')
+      } else {
+        console.log('✅ Todos los productos del carrito son válidos')
+      }
+    } catch (error) {
+      console.error('❌ Error al validar productos del carrito:', error)
+    }
+  }
+
+  // Ejecutar validación al cargar el store
+  validateCartItems()
+
   // Computed para obtener el total de items
   const totalItems = computed(() => {
     return items.value.reduce((sum, item) => sum + item.quantity, 0)

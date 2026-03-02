@@ -72,7 +72,7 @@
       <!-- Reservas -->
       <section class="section">
         <h2 class="section-title">
-          📖 PRODUCTOS DISPONIBLES PARA RESERVA
+          PRODUCTOS DISPONIBLES PARA RESERVA
         </h2>
         <div class="reservas-card">
           <p class="reservas-subtitle">Próximos lanzamientos y productos especiales</p>
@@ -407,7 +407,7 @@ const loadProductosMasComprados = async () => {
     setCategoryItems(['accesorios', 'accesorio'], ultimosAccesorios)
     console.log('✅ Productos más comprados cargados:', productosMasComprados.value.length)
   } catch (err) {
-    console.error('❌ Error al cargar productos:', err)
+    console.error('Error al cargar productos:', err)
     // Si falla, mostrar los datos por defecto
     productosMasComprados.value = [
       {

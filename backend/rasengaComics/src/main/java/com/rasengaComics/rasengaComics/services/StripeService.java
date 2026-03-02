@@ -3,15 +3,14 @@ package com.rasengaComics.rasengaComics.services;
 import com.rasengaComics.rasengaComics.dto.request.PedidoRequest;
 import com.rasengaComics.rasengaComics.dto.request.StripeCheckoutRequest;
 import com.rasengaComics.rasengaComics.dto.response.StripeCheckoutResponse;
-import com.rasengaComics.rasengaComics.models.Producto;
+import com.rasengaComics.rasengaComics.entities.Product;
 import com.rasengaComics.rasengaComics.models.Usuario;
-import com.rasengaComics.rasengaComics.repositories.ProductoRepository;
+import com.rasengaComics.rasengaComics.repositories.ProductRepository;
 import com.rasengaComics.rasengaComics.repositories.UsuarioRepository;
 import com.stripe.exception.StripeException;
 import com.stripe.model.LineItem;
 import com.stripe.model.LineItemCollection;
 import com.stripe.model.Price;
-import com.stripe.model.Product;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.param.checkout.SessionListLineItemsParams;
@@ -25,7 +24,7 @@ import java.util.Optional;
 @Service
 public class StripeService {
 
-    private final ProductoRepository productoRepository;
+    private final ProductRepository productRepository;
     private final UsuarioRepository usuarioRepository;
     private final PedidoService pedidoService;
 
@@ -35,10 +34,10 @@ public class StripeService {
     @Value("${stripe.cancel-url}")
     private String cancelUrl;
 
-    public StripeService(ProductoRepository productoRepository,
+    public StripeService(ProductRepository productRepository,
                          UsuarioRepository usuarioRepository,
                          PedidoService pedidoService) {
-        this.productoRepository = productoRepository;
+        this.productRepository = productRepository;
         this.usuarioRepository = usuarioRepository;
         this.pedidoService = pedidoService;
     }
@@ -58,15 +57,21 @@ public class StripeService {
             if (item.getProductoId() == null || item.getCantidad() == null) {
                 throw new IllegalArgumentException("items incompletos");
             }
-            Producto producto = productoRepository.findById(item.getProductoId())
+            Product producto = productRepository.findById(item.getProductoId())
                     .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado: " + item.getProductoId()));
 
-            long unitAmount = Math.round(producto.getPrecio() * 100);
+            long unitAmount = Math.round(producto.getPrice() * 100);
+
+            // Construir descripción con categoría y subcategoría
+            String descripcion = producto.getCategory();
+            if (producto.getSubcategory() != null && !producto.getSubcategory().isEmpty()) {
+                descripcion += " - " + producto.getSubcategory();
+            }
 
             SessionCreateParams.LineItem.PriceData.ProductData productData =
                     SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                            .setName(producto.getNombre())
-                            .setDescription(producto.getDescripcion())
+                            .setName(producto.getName())
+                            .setDescription(descripcion)
                             .putMetadata("productoId", producto.getId().toString())
                             .build();
 
@@ -120,7 +125,7 @@ public class StripeService {
             if (price == null) {
                 continue;
             }
-            Product product = price.getProductObject();
+            com.stripe.model.Product product = price.getProductObject();
             if (product == null || product.getMetadata() == null) {
                 continue;
             }

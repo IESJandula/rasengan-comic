@@ -40,7 +40,6 @@
               class="search-result-item"
               @click="selectSearchResult(product)"
             >
-              <img :src="product.image" :alt="product.name" class="result-image" />
               <div class="result-info">
                 <div class="result-name">{{ product.name }}</div>
                 <div class="result-category">{{ product.category }}</div>
@@ -383,13 +382,6 @@ const selectSearchResult = (product: any): void => {
 
 .search-result-item:hover {
   background-color: #f9fafb;
-}
-
-.result-image {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 4px;
 }
 
 .result-info {

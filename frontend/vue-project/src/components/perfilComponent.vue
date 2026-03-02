@@ -99,6 +99,15 @@
 
         <!-- Mis compras -->
         <div v-if="activeTab === 'Mis compras'" class="tab-pane">
+          <!-- Mensaje de éxito después de pago -->
+          <div v-if="showSuccessMessage" class="success-banner">
+            <div class="success-icon">✓</div>
+            <div class="success-content">
+              <h3>¡Pago completado con éxito!</h3>
+              <p>Tu pedido ha sido procesado correctamente. Recibirás un email de confirmación pronto.</p>
+            </div>
+          </div>
+          
           <div v-if="comprasLoading" class="compras-loading">
             <div class="loading-spinner"></div>
             <p>Cargando tus compras...</p>
@@ -495,12 +504,30 @@ const initTabFromQuery = () => {
   }
 }
 
-onMounted(() => {
+// Mostrar mensaje de éxito después de pago
+const showSuccessMessage = ref(false)
+
+onMounted(async () => {
   initTabFromQuery()
+  
+  // Si viene de un pago exitoso
   if (route.query.checkout === 'success') {
     cartStore.clearCart()
-  }
-  if (activeTab.value === 'Mis compras') {
+    activeTab.value = 'Mis compras'
+    showSuccessMessage.value = true
+    
+    // Esperar un poco para que el webhook procese el pedido
+    setTimeout(async () => {
+      await loadCompras()
+    }, 2000)
+    
+    // Ocultar mensaje después de 5 segundos
+    setTimeout(() => {
+      showSuccessMessage.value = false
+      // Limpiar el parámetro de la URL
+      router.replace({ query: { tab: 'compras' } })
+    }, 5000)
+  } else if (activeTab.value === 'Mis compras') {
     loadCompras()
   }
 })
@@ -804,6 +831,61 @@ watch(activeTab, (value) => {
   justify-content: center;
   padding: 60px 20px;
   gap: 15px;
+}
+
+/* Banner de éxito después de pago */
+.success-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 25px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 12px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  animation: slideDown 0.5s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.success-icon {
+  width: 50px;
+  height: 50px;
+  background-color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.success-content {
+  flex: 1;
+}
+
+.success-content h3 {
+  color: white;
+  margin: 0 0 5px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.success-content p {
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-size: 14px;
 }
 
 .loading-spinner {

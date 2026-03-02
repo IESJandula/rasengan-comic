@@ -1,11 +1,13 @@
 package com.rasengaComics.rasengaComics.services;
 
+import com.rasengaComics.rasengaComics.entities.Product;
 import com.rasengaComics.rasengaComics.models.Pedido;
 import com.rasengaComics.rasengaComics.models.Usuario;
 import com.rasengaComics.rasengaComics.models.Producto;
 import com.rasengaComics.rasengaComics.models.DetallePedido;
 import com.rasengaComics.rasengaComics.repositories.PedidoRepository;
 import com.rasengaComics.rasengaComics.repositories.UsuarioRepository;
+import com.rasengaComics.rasengaComics.repositories.ProductRepository;
 import com.rasengaComics.rasengaComics.repositories.ProductoRepository;
 import com.rasengaComics.rasengaComics.repositories.DetallePedidoRepository;
 import org.springframework.stereotype.Service;
@@ -19,15 +21,18 @@ public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ProductRepository productRepository;
     private final ProductoRepository productoRepository;
     private final DetallePedidoRepository detallePedidoRepository;
 
     public PedidoService(PedidoRepository pedidoRepository, 
                         UsuarioRepository usuarioRepository,
+                        ProductRepository productRepository,
                         ProductoRepository productoRepository,
                         DetallePedidoRepository detallePedidoRepository) {
         this.pedidoRepository = pedidoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.productRepository = productRepository;
         this.productoRepository = productoRepository;
         this.detallePedidoRepository = detallePedidoRepository;
     }
@@ -112,16 +117,34 @@ public class PedidoService {
         double total = 0.0;
 
         for (com.rasengaComics.rasengaComics.dto.request.PedidoRequest.Item item : items) {
-            Optional<Producto> optProducto = productoRepository.findById(item.getProductoId());
-            if (optProducto.isPresent()) {
-                Producto producto = optProducto.get();
+            // Buscar en la tabla products (no productos)
+            Optional<Product> optProduct = productRepository.findById(item.getProductoId());
+            if (optProduct.isPresent()) {
+                Product product = optProduct.get();
+                
+                // Buscar o crear el producto correspondiente en la tabla productos
+                Optional<Producto> optProducto = productoRepository.findById(item.getProductoId());
+                Producto producto;
+                if (optProducto.isPresent()) {
+                    producto = optProducto.get();
+                } else {
+                    // Crear producto en tabla productos desde product si no existe
+                    producto = new Producto();
+                    producto.setId(product.getId());
+                    producto.setNombre(product.getName());
+                    producto.setDescripcion(product.getCategory() + (product.getSubcategory() != null ? " - " + product.getSubcategory() : ""));
+                    producto.setPrecio(product.getPrice());
+                    producto.setStock(100); // Stock por defecto
+                    producto = productoRepository.save(producto);
+                }
+                
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedidoGuardado);
                 detalle.setProducto(producto);
                 detalle.setCantidad(item.getCantidad());
-                detalle.setPrecioUnitario(producto.getPrecio());
+                detalle.setPrecioUnitario(product.getPrice());
                 detallePedidoRepository.save(detalle);
-                total += producto.getPrecio() * item.getCantidad();
+                total += product.getPrice() * item.getCantidad();
             }
         }
 
