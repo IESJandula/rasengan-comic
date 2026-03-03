@@ -298,23 +298,27 @@ watch(() => route.params.id, () => {
 });
 
 const addToCart = () => {
-  cartStore.addToCart({
-    id: product.value.id,
-    name: product.value.name,
-    category: product.value.category,
-    price: product.value.price,
-    image: product.value.images[0],
-    stock: product.value.stock
-  }, quantity.value);
-  
-  // Mostrar notificación toast
-  toastMessage.value = `${quantity.value} unidad(es) de ${product.value.name}`;
-  showToast.value = true;
-  
-  // Ocultar después de 3 segundos
-  setTimeout(() => {
-    showToast.value = false;
-  }, 3000);
+  if (product.value.isReserve) {
+    router.push('/perfil?tab=reservas')
+  } else {
+    cartStore.addToCart({
+      id: product.value.id,
+      name: product.value.name,
+      category: product.value.category,
+      price: product.value.price,
+      image: product.value.images[0],
+      stock: product.value.stock
+    }, quantity.value);
+    
+    // Mostrar notificación toast
+    toastMessage.value = `${quantity.value} unidad(es) de ${product.value.name}`;
+    showToast.value = true;
+    
+    // Ocultar después de 3 segundos
+    setTimeout(() => {
+      showToast.value = false;
+    }, 3000);
+  }
 };
 
 const viewProduct = (productId: number) => {

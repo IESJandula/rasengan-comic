@@ -1143,11 +1143,7 @@ const addToCart = (productId: number) => {
   if (!product) return
   
   if (product.isReserve) {
-    toastMessage.value = `Reserva realizada para: ${product.name}`
-    showToast.value = true
-    setTimeout(() => {
-      showToast.value = false
-    }, 3000)
+    router.push('/perfil?tab=reservas')
   } else {
     cartStore.addToCart({
       id: product.id,
