@@ -1142,32 +1142,29 @@ const addToCart = (productId: number) => {
   const product = products.value.find(p => p.id === productId)
   if (!product) return
   
-  if (product.isReserve) {
-    router.push('/perfil?tab=reservas')
-  } else {
-    cartStore.addToCart({
-      id: product.id,
-      name: product.name,
-      category: product.category,
-      price: product.price,
-      image: product.image
-    })
-    
-    // Mostrar notificación toast
-    toastMessage.value = `${product.name}`
-    showToast.value = true
-    setTimeout(() => {
-      showToast.value = false
-    }, 3000)
-    
-    // Agregar producto a la lista de recientemente agregados
-    recentlyAddedProducts.value.add(productId)
-    
-    // Remover después de 1.5 segundos para que se vea la animación
-    setTimeout(() => {
-      recentlyAddedProducts.value.delete(productId)
-    }, 1500)
-  }
+  // Agregar al carrito tanto productos normales como reservas
+  cartStore.addToCart({
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    price: product.price,
+    image: product.image
+  })
+  
+  // Mostrar notificación toast
+  toastMessage.value = `${product.name}`
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+  
+  // Agregar producto a la lista de recientemente agregados
+  recentlyAddedProducts.value.add(productId)
+  
+  // Remover después de 1.5 segundos para que se vea la animación
+  setTimeout(() => {
+    recentlyAddedProducts.value.delete(productId)
+  }, 1500)
 }
 
 const viewProduct = (productId: number) => {

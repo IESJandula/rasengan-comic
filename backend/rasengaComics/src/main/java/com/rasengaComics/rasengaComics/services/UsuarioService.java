@@ -58,6 +58,21 @@ public class UsuarioService {
         }
         return null;
     }
+    
+    // Actualizar dirección
+    public Usuario actualizarDireccion(String uid, String telefono, String calle, String ciudad, String codigoPostal, String pais) {
+        Optional<Usuario> optUsuario = usuarioRepository.findById(uid);
+        if (optUsuario.isPresent()) {
+            Usuario usuario = optUsuario.get();
+            if (telefono != null) usuario.setTelefono(telefono);
+            if (calle != null) usuario.setCalle(calle);
+            if (ciudad != null) usuario.setCiudad(ciudad);
+            if (codigoPostal != null) usuario.setCodigoPostal(codigoPostal);
+            if (pais != null) usuario.setPais(pais);
+            return usuarioRepository.save(usuario);
+        }
+        return null;
+    }
 
     // Cambiar rol (solo admin)
     public Usuario cambiarRol(String uid, String nuevoRol) {
@@ -89,6 +104,11 @@ public class UsuarioService {
         r.setEmail(u.getEmail());
         r.setNombre(u.getNombre());
         r.setRol(u.getRol());
+        r.setTelefono(u.getTelefono());
+        r.setCalle(u.getCalle());
+        r.setCiudad(u.getCiudad());
+        r.setCodigoPostal(u.getCodigoPostal());
+        r.setPais(u.getPais());
         return r;
     }
 }

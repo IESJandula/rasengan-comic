@@ -77,6 +77,29 @@ public class UsuarioController {
         }
     }
 
+    // Actualizar dirección de usuario
+    @PutMapping("/{uid}/direccion")
+    public ResponseEntity<?> actualizarDireccion(
+            @PathVariable String uid,
+            @RequestBody Map<String, String> body,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            String telefono = body.get("telefono");
+            String calle = body.get("calle");
+            String ciudad = body.get("ciudad");
+            String codigoPostal = body.get("codigoPostal");
+            String pais = body.get("pais");
+            
+            Usuario actualizado = usuarioService.actualizarDireccion(uid, telefono, calle, ciudad, codigoPostal, pais);
+            if (actualizado != null) {
+                return ResponseEntity.ok(usuarioService.toResponse(actualizado));
+            }
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(new ApiResponse(false, e.getMessage(), null));
+        }
+    }
+
     // Eliminar usuario
     @DeleteMapping("/{uid}")
     public ResponseEntity<?> eliminar(
