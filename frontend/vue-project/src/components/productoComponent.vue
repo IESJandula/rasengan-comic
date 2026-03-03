@@ -100,10 +100,10 @@
 
           <button
             @click="addToCart"
-            :disabled="product.stock === 0"
+            :disabled="!product.isReserve && product.stock === 0"
             class="add-to-cart-btn"
           >
-            🛒 {{ product.stock > 0 ? 'Agregar al Carrito' : 'Agotado' }}
+            🛒 {{ product.isReserve ? 'Reservar' : (product.stock > 0 ? 'Agregar al Carrito' : 'Agotado') }}
           </button>
 
         </div>

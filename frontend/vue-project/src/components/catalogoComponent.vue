@@ -396,7 +396,7 @@
               </div>
               <button 
                 @click.stop="addToCart(product.id)"
-                :disabled="product.stock === 0"
+                :disabled="!product.isReserve && product.stock === 0"
                 :class="[
                   'add-to-cart-btn', 
                   product.isReserve ? 'reserve-btn' : '',
