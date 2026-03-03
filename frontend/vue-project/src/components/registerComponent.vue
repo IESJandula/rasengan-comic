@@ -11,8 +11,10 @@
 
       <!-- Formulario de Registro -->
       <div class="register-form-container">
-        <h1 class="register-title">Crear Cuenta</h1>
-        <p class="register-subtitle">Completa el formulario para registrarte</p>
+        <router-link to="/" class="auth-home-link" aria-label="Ir a inicio">
+          <img src="@/assets/img_cabecera.png" alt="Rasengan Comics" class="auth-logo" />
+        </router-link>
+        <h1 class="register-title">Registrate:</h1>
 
         <form @submit.prevent="handleRegister" class="register-form">
           <!-- Nombre completo -->
@@ -41,18 +43,6 @@
               required
             />
             <span v-if="errors.email" class="field-error">{{ errors.email }}</span>
-          </div>
-
-          <!-- Teléfono -->
-          <div class="form-group">
-            <label for="phone" class="form-label">Teléfono (Opcional)</label>
-            <input
-              id="phone"
-              v-model="phone"
-              type="tel"
-              placeholder="+34 123 456 789"
-              class="form-input"
-            />
           </div>
 
           <!-- Contraseña -->
@@ -116,12 +106,6 @@
             </span>
           </label>
 
-          <!-- Newsletter -->
-          <label class="newsletter-checkbox">
-            <input v-model="subscribeNewsletter" type="checkbox" />
-            <span>Deseo recibir ofertas y promociones por email</span>
-          </label>
-
           <!-- Mensaje de error general -->
           <div v-if="generalError" class="error-message">
             {{ generalError }}
@@ -146,18 +130,6 @@
           </p>
         </div>
 
-        <!-- Divider -->
-        <div class="divider">O regístrate con</div>
-
-        <!-- Registro Social -->
-        <div class="social-register">
-          <button type="button" class="social-button google">
-            <span>Google</span>
-          </button>
-          <button type="button" class="social-button facebook">
-            <span>Facebook</span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -175,13 +147,11 @@ const cartStore = useCartStore()
 
 const fullname = ref('')
 const email = ref('')
-const phone = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const acceptTerms = ref(false)
-const subscribeNewsletter = ref(false)
 const loading = ref(false)
 const generalError = ref('')
 const successMessage = ref('')
@@ -311,30 +281,36 @@ const goToLogin = () => {
 
 .register-form-container {
   flex: 1;
-  padding: 40px 30px;
+  padding: 60px 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-height: 100vh;
-  overflow-y: auto;
 }
 
 .register-title {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: bold;
   color: #1f2937;
   margin-bottom: 10px;
 }
 
-.register-title::before {
-  content: '🔴 ';
-  color: #dc2626;
+.auth-home-link {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.auth-logo {
+  height: 10em;
+  width: auto;
+  object-fit: contain;
 }
 
 .register-subtitle {
   color: #6b7280;
-  font-size: 14px;
-  margin-bottom: 30px;
+  font-size: 16px;
+  margin-bottom: 40px;
 }
 
 .register-form {
@@ -518,62 +494,6 @@ const goToLogin = () => {
   text-decoration: underline;
 }
 
-.divider {
-  text-align: center;
-  color: #d1d5db;
-  margin: 20px 0 15px 0;
-  position: relative;
-  font-size: 13px;
-}
-
-.divider::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 100%;
-  height: 1px;
-  background-color: #e5e7eb;
-  z-index: -1;
-}
-
-.divider {
-  background-color: white;
-  padding: 0 10px;
-  display: inline-block;
-  width: 100%;
-}
-
-.social-register {
-  display: flex;
-  gap: 12px;
-}
-
-.social-button {
-  flex: 1;
-  padding: 10px;
-  border: 2px solid #e5e7eb;
-  background-color: white;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 13px;
-}
-
-.social-button:hover {
-  border-color: #dc2626;
-  background-color: #fef2f2;
-}
-
-.social-button.google {
-  color: #1f2937;
-}
-
-.social-button.facebook {
-  color: #1877f2;
-}
-
 .register-image {
   flex: 1;
   position: relative;
@@ -617,12 +537,11 @@ const goToLogin = () => {
   }
 
   .register-form-container {
-    padding: 30px 20px;
-    max-height: none;
+    padding: 40px 30px;
   }
 
   .register-title {
-    font-size: 24px;
+    font-size: 28px;
   }
 }
 
@@ -630,22 +549,5 @@ const goToLogin = () => {
   .register-image {
     display: block;
   }
-}
-
-.register-form-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.register-form-container::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-.register-form-container::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-.register-form-container::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
 }
 </style>

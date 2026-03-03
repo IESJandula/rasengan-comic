@@ -19,7 +19,6 @@
         <li class="mobile-home-item"><router-link to="/" class="nav-link" @click="closeMenu">🏠 Inicio</router-link></li>
         <li><router-link to="/tienda" class="nav-link" @click="closeMenu">Tienda</router-link></li>
         <li><router-link to="/eventos" class="nav-link" @click="closeMenu">Eventos</router-link></li>
-        <li v-if="authStore.isAuthenticated"><router-link to="/reservas" class="nav-link" @click="closeMenu">Reservas</router-link></li>
         
         <!-- Carrito en móvil -->
         <li class="mobile-cart-item">
@@ -33,7 +32,6 @@
         <li v-if="authStore.isAuthenticated && authStore.user" class="mobile-user-item">
           <router-link to="/perfil" class="nav-link" @click="closeMenu">👤 Mi Perfil</router-link>
           <router-link to="/perfil?tab=compras" class="nav-link" @click="closeMenu">🛍️ Mis Compras</router-link>
-          <router-link to="/reservas" class="nav-link" @click="closeMenu">📅 Mis Reservas</router-link>
           <router-link v-if="isAdmin" to="/admin" class="nav-link" @click="closeMenu">⚙️ Admin Panel</router-link>
           <button @click="logout(); closeMenu()" class="nav-link logout-link">🚪 Cerrar Sesión</button>
         </li>
@@ -109,7 +107,6 @@
             <router-link to="/perfil" class="dropdown-item">👤 Mi Perfil</router-link>
             <router-link to="/carrito" class="dropdown-item">🛒 Carrito</router-link>
             <router-link to="/perfil?tab=compras" class="dropdown-item">🛍️ Mis Compras</router-link>
-            <router-link to="/reservas" class="dropdown-item">📅 Mis Reservas</router-link>
             <router-link v-if="isAdmin" to="/admin" class="dropdown-item admin-link">⚙️ Admin Panel</router-link>
             <div class="dropdown-divider"></div>
             <button @click="logout" class="dropdown-item logout">🚪 Cerrar Sesión</button>

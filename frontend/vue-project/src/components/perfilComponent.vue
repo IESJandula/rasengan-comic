@@ -168,6 +168,11 @@
           </div>
         </div>
 
+        <!-- Mis reservas -->
+        <div v-if="activeTab === 'Mis reservas'" class="tab-pane tab-pane-reservas">
+          <ReservasComponent />
+        </div>
+
         <!-- Seguridad -->
         <div v-if="activeTab === 'Seguridad'" class="tab-pane">
           <div class="security-section">
@@ -260,6 +265,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth'
 import { auth } from '@/firebase'
+import ReservasComponent from '@/components/reservasComponent.vue'
 
 const authStore = useAuthStore()
 const cartStore = useCartStore()
@@ -269,7 +275,7 @@ const router = useRouter()
 const activeTab = ref('Información Personal')
 const isAdmin = ref(true) // TODO: Obtener del backend
 const tabs = computed(() => {
-  const baseTabs = ['Información Personal', 'Dirección', 'Preferencias', 'Mis compras', 'Seguridad']
+  const baseTabs = ['Información Personal', 'Dirección', 'Preferencias', 'Mis compras', 'Mis reservas', 'Seguridad']
   return baseTabs
 })
 
@@ -299,6 +305,74 @@ const preferences = ref({
   notifications: true,
   sms: false
 })
+
+type PersistedProfile = {
+  name: string
+  phone: string
+  address: {
+    street: string
+    city: string
+    zipCode: string
+    country: string
+  }
+  preferences: {
+    newsletter: boolean
+    notifications: boolean
+    sms: boolean
+  }
+}
+
+const getProfileStorageKey = () => {
+  const identity = authStore.user?.uid || authStore.user?.email
+  return identity ? `rasenga_profile_${identity}` : null
+}
+
+const saveProfileToStorage = () => {
+  const storageKey = getProfileStorageKey()
+  if (!storageKey) return
+
+  const payload: PersistedProfile = {
+    name: user.value.name,
+    phone: user.value.phone,
+    address: { ...user.value.address },
+    preferences: { ...preferences.value }
+  }
+
+  localStorage.setItem(storageKey, JSON.stringify(payload))
+}
+
+const loadProfileFromStorage = () => {
+  const storageKey = getProfileStorageKey()
+  if (!storageKey) return
+
+  const storedProfile = localStorage.getItem(storageKey)
+  if (!storedProfile) return
+
+  try {
+    const parsed: PersistedProfile = JSON.parse(storedProfile)
+
+    user.value = {
+      ...user.value,
+      name: parsed.name || user.value.name,
+      phone: parsed.phone || user.value.phone,
+      address: {
+        ...user.value.address,
+        ...(parsed.address || {})
+      }
+    }
+
+    preferences.value = {
+      ...preferences.value,
+      ...(parsed.preferences || {})
+    }
+
+    if (authStore.user) {
+      authStore.user.name = user.value.name
+    }
+  } catch (error) {
+    console.error('Error al cargar perfil desde localStorage:', error)
+  }
+}
 
 // Estados de modales
 const showEditProfileModal = ref(false)
@@ -348,6 +422,10 @@ const getInitials = (name: string) => {
 const saveProfile = () => {
   user.value.name = editForm.value.name
   user.value.phone = editForm.value.phone
+  if (authStore.user) {
+    authStore.user.name = user.value.name
+  }
+  saveProfileToStorage()
   showEditProfileModal.value = false
   alert('✓ Perfil actualizado correctamente')
 }
@@ -366,6 +444,7 @@ const editAddress = () => {
 // Guardar dirección
 const saveAddress = () => {
   user.value.address = { ...addressForm.value }
+  saveProfileToStorage()
   showEditAddressModal.value = false
   alert('✓ Dirección actualizada correctamente')
 }
@@ -383,6 +462,7 @@ const addAddress = () => {
 
 // Guardar preferencias
 const savePreferences = () => {
+  saveProfileToStorage()
   alert('✓ Preferencias guardadas correctamente')
 }
 
@@ -514,6 +594,11 @@ const loadCompras = async () => {
 const initTabFromQuery = () => {
   if (route.query.tab === 'compras') {
     activeTab.value = 'Mis compras'
+    return
+  }
+
+  if (route.query.tab === 'reservas') {
+    activeTab.value = 'Mis reservas'
   }
 }
 
@@ -524,6 +609,16 @@ const initTabFromQuery = () => {
 const showSuccessMessage = ref(false)
 
 onMounted(async () => {
+  if (authStore.user?.name) {
+    user.value.name = authStore.user.name
+    editForm.value.name = authStore.user.name
+  }
+
+  loadProfileFromStorage()
+  editForm.value.name = user.value.name
+  editForm.value.phone = user.value.phone
+  addressForm.value = { ...user.value.address }
+
   initTabFromQuery()
   
   // Si viene de un pago exitoso
@@ -547,6 +642,20 @@ onMounted(async () => {
     loadCompras()
   }
 })
+
+watch(
+  () => authStore.user?.uid,
+  () => {
+    if (!authStore.user) return
+    if (authStore.user.name) {
+      user.value.name = authStore.user.name
+    }
+    loadProfileFromStorage()
+    editForm.value.name = user.value.name
+    editForm.value.phone = user.value.phone
+    addressForm.value = { ...user.value.address }
+  }
+)
 
 watch(activeTab, (value) => {
   if (value === 'Mis compras' && compras.value.length === 0) {

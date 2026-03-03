@@ -3,8 +3,10 @@
     <div class="login-wrapper">
       <!-- Formulario de Login -->
       <div class="login-form-container">
-        <h1 class="login-title">Rasengan Comics</h1>
-        <p class="login-subtitle">Inicia sesión en tu cuenta</p>
+        <router-link to="/" class="auth-home-link" aria-label="Ir a inicio">
+          <img src="@/assets/img_cabecera.png" alt="Rasengan Comics" class="auth-logo" />
+        </router-link>
+        <h1 class="login-title">Inicia sesión:</h1>
 
         <form @submit.prevent="handleLogin" class="login-form">
           <!-- Email -->
@@ -65,18 +67,6 @@
           <a href="#" class="link">¿Olvidaste tu contraseña?</a>
         </div>
 
-        <!-- Divider -->
-        <div class="divider">O continúa con</div>
-
-        <!-- Login Social -->
-        <div class="social-login">
-          <button type="button" class="social-button google">
-            <span>Google</span>
-          </button>
-          <button type="button" class="social-button facebook">
-            <span>Facebook</span>
-          </button>
-        </div>
       </div>
 
       <!-- Imagen lateral -->
@@ -201,9 +191,17 @@ const goToRegister = () => {
   margin-bottom: 10px;
 }
 
-.login-title::before {
-  content: '🔴 ';
-  color: #dc2626;
+.auth-home-link {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.auth-logo {
+  height: 10em;
+  width: auto;
+  object-fit: contain;
 }
 
 .login-subtitle {
@@ -338,61 +336,6 @@ const goToRegister = () => {
 .link:hover {
   color: #b91c1c;
   text-decoration: underline;
-}
-
-.divider {
-  text-align: center;
-  color: #d1d5db;
-  margin: 30px 0 20px 0;
-  position: relative;
-}
-
-.divider::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 100%;
-  height: 1px;
-  background-color: #e5e7eb;
-  z-index: -1;
-}
-
-.divider {
-  background-color: white;
-  padding: 0 10px;
-  display: inline-block;
-  width: 100%;
-}
-
-.social-login {
-  display: flex;
-  gap: 12px;
-}
-
-.social-button {
-  flex: 1;
-  padding: 12px;
-  border: 2px solid #e5e7eb;
-  background-color: white;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 14px;
-}
-
-.social-button:hover {
-  border-color: #dc2626;
-  background-color: #fef2f2;
-}
-
-.social-button.google {
-  color: #1f2937;
-}
-
-.social-button.facebook {
-  color: #1877f2;
 }
 
 .login-image {
