@@ -42,6 +42,7 @@ public class ProductService {
         product.setDiscount(productDetails.getDiscount());
         product.setImage(productDetails.getImage());
         product.setAvailable(productDetails.getAvailable());
+        product.setStock(productDetails.getStock());
         product.setRating(productDetails.getRating());
         product.setReviews(productDetails.getReviews());
         product.setIsReserve(productDetails.getIsReserve());

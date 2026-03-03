@@ -136,17 +136,39 @@
           <div class="form-content">
             <h2>{{ editingProduct ? 'Editar' : 'Nuevo' }} Producto</h2>
             <form @submit.prevent="saveProduct">
-              <input v-model="productForm.name" placeholder="Nombre del producto" required />
-              <input v-model="productForm.category" placeholder="Categoría" required />
-              <input v-model="productForm.subcategory" placeholder="Subcategoría (opcional)" />
-              <input v-model.number="productForm.price" type="number" placeholder="Precio" step="0.01" required />
-              <input v-model.number="productForm.originalPrice" type="number" placeholder="Precio original (opcional)" step="0.01" />
-              <input v-model.number="productForm.discount" type="number" placeholder="Descuento %" min="0" max="100" />
+              <div class="form-group">
+                <label for="productName">📝 Nombre del Producto</label>
+                <input id="productName" v-model="productForm.name" placeholder="Ej: One Piece Vol. 100" required />
+              </div>
+              <div class="form-group">
+                <label for="productCategory">📂 Categoría</label>
+                <input id="productCategory" v-model="productForm.category" placeholder="Ej: Manga, Comics, Merchandising" required />
+              </div>
+              <div class="form-group">
+                <label for="productSubcategory">🏷️ Subcategoría (opcional)</label>
+                <input id="productSubcategory" v-model="productForm.subcategory" placeholder="Ej: Shonen, Adventure" />
+              </div>
+              <div class="form-group">
+                <label for="productPrice">💰 Precio</label>
+                <input id="productPrice" v-model.number="productForm.price" type="number" placeholder="0.00" step="0.01" required />
+              </div>
+              <div class="form-group">
+                <label for="productOriginalPrice">🏷️ Precio Original (opcional)</label>
+                <input id="productOriginalPrice" v-model.number="productForm.originalPrice" type="number" placeholder="0.00" step="0.01" />
+              </div>
+              <div class="form-group">
+                <label for="productDiscount">📉 Descuento (%)</label>
+                <input id="productDiscount" v-model.number="productForm.discount" type="number" placeholder="0" min="0" max="100" />
+              </div>
+              <div class="form-group">
+                <label for="productStock">📦 Stock Disponible</label>
+                <input id="productStock" v-model.number="productForm.stock" type="number" placeholder="0" min="0" required />
+              </div>
               
               <div class="checkbox-group">
-                <label><input type="checkbox" v-model="productForm.available" /> Disponible</label>
-                <label><input type="checkbox" v-model="productForm.isNew" /> Producto Nuevo</label>
-                <label><input type="checkbox" v-model="productForm.isReserve" /> Es Reserva</label>
+                <label><input type="checkbox" v-model="productForm.available" /> ✅ Disponible</label>
+                <label><input type="checkbox" v-model="productForm.isNew" /> 🆕 Producto Nuevo</label>
+                <label><input type="checkbox" v-model="productForm.isReserve" /> 📅 Es Reserva</label>
               </div>
               
               <!-- Upload imagen -->
@@ -182,7 +204,10 @@
           <div v-for="product in products" :key="product.id" class="item-card">
             <div class="item-details">
               <h3>{{ product.name }}</h3>
-              <p>${{ product.price }}</p>
+              <p>💰 ${{ product.price }}</p>
+              <p :class="['stock-indicator', product.stock === 0 ? 'out-of-stock' : product.stock < 10 ? 'low-stock' : 'in-stock']">
+                📦 Stock: {{ product.stock }}
+              </p>
             </div>
             <div class="item-actions">
               <button @click="editProductHandler(product)" class="edit-btn">Editar</button>
@@ -203,15 +228,30 @@
           <div class="form-content">
             <h2>{{ editingEvent ? 'Editar' : 'Nuevo' }} Evento</h2>
             <form @submit.prevent="saveEvent">
-              <input v-model="eventForm.name" placeholder="Nombre del evento" required />
-              <input v-model="eventForm.date" type="date" required />
-              <input v-model="eventForm.time" type="time" required />
-              <textarea v-model="eventForm.description" placeholder="Descripción"></textarea>
-              <select v-model="eventForm.type">
-                <option value="tournament">Torneo</option>
-                <option value="workshop">Taller</option>
-                <option value="special">Especial</option>
-              </select>
+              <div class="form-group">
+                <label for="eventName">🎯 Nombre del Evento</label>
+                <input id="eventName" v-model="eventForm.name" placeholder="Ej: Torneo de Yu-Gi-Oh" required />
+              </div>
+              <div class="form-group">
+                <label for="eventDate">📅 Fecha</label>
+                <input id="eventDate" v-model="eventForm.date" type="date" required />
+              </div>
+              <div class="form-group">
+                <label for="eventTime">⏰ Hora</label>
+                <input id="eventTime" v-model="eventForm.time" type="time" required />
+              </div>
+              <div class="form-group">
+                <label for="eventDescription">📝 Descripción</label>
+                <textarea id="eventDescription" v-model="eventForm.description" placeholder="Describe el evento con detalle..."></textarea>
+              </div>
+              <div class="form-group">
+                <label for="eventType">🎪 Tipo de Evento</label>
+                <select id="eventType" v-model="eventForm.type">
+                  <option value="tournament">🏆 Torneo</option>
+                  <option value="workshop">📚 Taller</option>
+                  <option value="special">✨ Especial</option>
+                </select>
+              </div>
               <div class="form-buttons">
                 <button type="submit" class="save-btn">Guardar</button>
                 <button type="button" @click="closeEventForm()" class="cancel-btn">Cancelar</button>
@@ -419,7 +459,60 @@
         </div>
       </div>
 
-      <!-- Usuarios -->
+      <!-- Reportes -->
+      <div v-if="activeTab === 'Reportes'" class="admin-section">
+        <h1>📊 Generador de Reportes</h1>
+        
+        <div class="reports-container">
+          <div class="report-card">
+            <div class="report-header">
+              <h3>📦 Exportar Productos</h3>
+              <p>Descarga todos los productos en formato Excel</p>
+            </div>
+            <div class="report-options">
+              <div class="option-group">
+                <h4>📋 Seleccionar columnas a incluir:</h4>
+                <div class="checkbox-list">
+                  <label><input type="checkbox" v-model="productExportOptions.name" /> Nombre</label>
+                  <label><input type="checkbox" v-model="productExportOptions.category" /> Categoría</label>
+                  <label><input type="checkbox" v-model="productExportOptions.price" /> Precio</label>
+                  <label><input type="checkbox" v-model="productExportOptions.stock" /> Stock</label>
+                  <label><input type="checkbox" v-model="productExportOptions.discount" /> Descuento</label>
+                  <label><input type="checkbox" v-model="productExportOptions.available" /> Disponible</label>
+                </div>
+              </div>
+              <button @click="exportProductsToExcel" class="export-btn">
+                📥 Descargar Excel
+              </button>
+            </div>
+          </div>
+
+          <div class="report-card">
+            <div class="report-header">
+              <h3>📊 Estadísticas Rápidas</h3>
+              <p>Información general del inventario</p>
+            </div>
+            <div class="stats-info">
+              <div class="stat-item">
+                <span class="stat-label">Total de productos:</span>
+                <span class="stat-value">{{ products.length }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Productos en stock:</span>
+                <span class="stat-value">{{ products.filter(p => p.stock > 0).length }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Productos agotados:</span>
+                <span class="stat-value">{{ products.filter(p => p.stock === 0).length }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Valor total en stock:</span>
+                <span class="stat-value">{{ formatPrice(totalStockValue) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -436,6 +529,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
+import * as XLSX from 'xlsx'
 
 interface Product {
   id: number
@@ -447,6 +541,7 @@ interface Product {
   discount?: number
   image: string
   available: boolean
+  stock: number
   rating: number
   reviews: number
   isReserve: boolean
@@ -518,7 +613,7 @@ if (!isAdmin.value) {
 }
 
 const activeTab = ref('Estadísticas')
-const tabs = ['Reservas', 'Productos', 'Eventos', 'Descuentos']
+const tabs = ['Reservas', 'Productos', 'Eventos', 'Descuentos', 'Reportes']
 
 // Reservas Admin
 const activeReservaFilter = ref('todas')
@@ -552,6 +647,7 @@ const loadProductos = async () => {
       name: p.name,
       category: p.category,
       price: p.price || 0,
+      stock: p.stock || 0,
       discount: p.discount || 0,
       description: p.description || '',
       image: p.image && p.image.trim() ? p.image : 'https://via.placeholder.com/150?text=Sin+imagen'
@@ -691,6 +787,7 @@ const productForm = ref({
   discount: 0,
   image: '',
   available: true,
+  stock: 0,
   rating: 0.0,
   reviews: 0,
   isReserve: false,
@@ -712,6 +809,7 @@ const resetProductForm = (): void => {
     discount: 0,
     image: '',
     available: true,
+    stock: 0,
     rating: 0.0,
     reviews: 0,
     isReserve: false,
@@ -844,6 +942,7 @@ const editProductHandler = (product: Product): void => {
     discount: product.discount || 0,
     image: product.image,
     available: product.available !== undefined ? product.available : true,
+    stock: product.stock || 0,
     rating: product.rating || 0.0,
     reviews: product.reviews || 0,
     isReserve: product.isReserve || false,
@@ -1097,6 +1196,58 @@ const getScopeText = (discount: any) => {
       return `Producto ID: ${discount.scopeValue}`
     default:
       return 'No especificado'
+  }
+}
+
+// Reportes - Exportación a Excel
+const productExportOptions = ref({
+  name: true,
+  category: true,
+  price: true,
+  stock: true,
+  discount: true,
+  available: true
+})
+
+const totalStockValue = computed(() => {
+  return products.value.reduce((total, product) => {
+    return total + (product.price * (product.stock || 0))
+  }, 0)
+})
+
+const exportProductsToExcel = async () => {
+  try {
+    // Preparar datos para exportar
+    const dataToExport = products.value.map((product: any) => {
+      const row: any = {}
+      
+      if (productExportOptions.value.name) row['Nombre'] = product.name
+      if (productExportOptions.value.category) row['Categoría'] = product.category
+      if (productExportOptions.value.price) row['Precio (€)'] = product.price
+      if (productExportOptions.value.stock) row['Stock'] = product.stock || 0
+      if (productExportOptions.value.discount) row['Descuento (%)'] = product.discount || 0
+      if (productExportOptions.value.available) row['Disponible'] = product.available ? 'Sí' : 'No'
+      
+      return row
+    })
+
+    // Crear libro de trabajo
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Productos')
+
+    // Ajustar ancho de columnas
+    const colWidths = Object.keys(dataToExport[0] || {}).map(() => 15)
+    worksheet['!cols'] = colWidths.map(width => ({ wch: width }))
+
+    // Descargar archivo
+    const fileName = `Productos_${new Date().toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(workbook, fileName)
+
+    alert('✅ Archivo Excel descargado correctamente')
+  } catch (error) {
+    console.error('Error al exportar productos:', error)
+    alert('❌ Error al descargar el archivo')
   }
 }
 
@@ -1489,41 +1640,47 @@ const getScopeText = (discount: any) => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overflow-y: auto;
+  padding: 20px;
 }
 
 .form-content {
   background-color: white;
-  padding: 30px;
+  padding: 20px;
   border-radius: 12px;
-  width: 90%;
-  max-width: 500px;
+  width: 100%;
+  max-width: 450px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .form-content h2 {
   color: #1f2937;
-  margin-bottom: 20px;
+  margin: 0 0 15px 0;
+  font-size: 18px;
 }
 
 .form-content form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
 .form-content input,
 .form-content textarea,
 .form-content select {
-  padding: 12px;
+  padding: 9px;
   border: 2px solid #e5e7eb;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-family: inherit;
 }
 
 .form-content input[type="file"] {
-  padding: 8px;
+  padding: 6px;
   cursor: pointer;
+  font-size: 12px;
 }
 
 .form-content input:disabled {
@@ -1540,21 +1697,88 @@ const getScopeText = (discount: any) => {
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  padding: 9px !important;
+  border: 2px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 70px;
+  font-family: inherit;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border-left: 4px solid #dc2626;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #1f2937;
+  margin: 0;
+  font-size: 13px;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #dc2626;
+}
+
 .form-buttons {
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .save-btn,
 .cancel-btn {
   flex: 1;
-  padding: 12px;
+  padding: 10px;
   border: none;
   border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  font-size: 13px;
 }
 
 .save-btn {
@@ -1583,18 +1807,18 @@ const getScopeText = (discount: any) => {
 .image-upload-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .image-upload-section label {
   font-weight: 600;
   color: #374151;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .uploading-text {
   color: #3b82f6;
-  font-size: 13px;
+  font-size: 12px;
   font-style: italic;
   margin: 0;
 }
@@ -1602,7 +1826,7 @@ const getScopeText = (discount: any) => {
 .image-preview {
   display: flex;
   justify-content: center;
-  padding: 15px;
+  padding: 10px;
   background-color: #f9fafb;
   border-radius: 6px;
   border: 2px solid #e5e7eb;
@@ -1617,20 +1841,24 @@ const getScopeText = (discount: any) => {
 
 .preview-container img {
   max-width: 100%;
-  max-height: 300px;
+  max-height: 150px;
   border-radius: 6px;
   object-fit: contain;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .no-image-placeholder {
-  padding: 30px 15px;
+  padding: 15px 10px;
   background-color: #f3f4f6;
   border-radius: 6px;
   border: 2px dashed #d1d5db;
   text-align: center;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 12px;
+}
+
+.no-image-placeholder p {
+  margin: 0;
 }
 
 .items-list {
@@ -1668,6 +1896,30 @@ const getScopeText = (discount: any) => {
   color: #6b7280;
   font-size: 14px;
   margin: 3px 0;
+}
+
+.stock-indicator {
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-top: 5px;
+  display: inline-block;
+}
+
+.stock-indicator.in-stock {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.stock-indicator.low-stock {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.stock-indicator.out-of-stock {
+  background-color: #fee2e2;
+  color: #991b1b;
 }
 
 .expiry,
@@ -2338,6 +2590,144 @@ const getScopeText = (discount: any) => {
   .discount-header-admin {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* Reportes */
+.reports-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+}
+
+.report-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.report-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-color: #dc2626;
+}
+
+.report-header {
+  margin-bottom: 20px;
+  border-bottom: 2px solid #f3f4f6;
+  padding-bottom: 15px;
+}
+
+.report-header h3 {
+  font-size: 18px;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.report-header p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+.report-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.option-group h4 {
+  font-size: 14px;
+  color: #374151;
+  margin: 0 0 10px 0;
+}
+
+.checkbox-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.checkbox-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.checkbox-list input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #dc2626;
+  cursor: pointer;
+}
+
+.export-btn {
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
+}
+
+.export-btn:active {
+  transform: translateY(0);
+}
+
+.stats-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 4px solid #dc2626;
+}
+
+.stat-label {
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: #dc2626;
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .reports-container {
+    grid-template-columns: 1fr;
+  }
+
+  .checkbox-list {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-info {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -380,7 +380,7 @@
           >
             <div class="product-image-container">
               <img :src="product.image" :alt="product.name" class="product-image" />
-              <span v-if="!product.available" class="out-of-stock">Agotado</span>
+              <span v-if="product.stock === 0" class="out-of-stock">Agotado</span>
               <span v-if="product.isReserve" class="reserve-badge">Reserva</span>
               <span v-if="product.isNew" class="new-badge">Nuevo</span>
               <span v-if="product.discount" class="discount-badge">-{{ product.discount }}%</span>
@@ -396,7 +396,7 @@
               </div>
               <button 
                 @click.stop="addToCart(product.id)"
-                :disabled="!product.available"
+                :disabled="product.stock === 0"
                 :class="[
                   'add-to-cart-btn', 
                   product.isReserve ? 'reserve-btn' : '',
@@ -404,7 +404,7 @@
                 ]"
               >
                 <span v-if="recentlyAddedProducts.has(product.id)">✅ Añadido al carrito</span>
-                <span v-else>{{ product.isReserve ? 'Reservar' : (product.available ? '🛒 Agregar al Carrito' : 'No Disponible') }}</span>
+                <span v-else>{{ product.isReserve ? 'Reservar' : (product.stock > 0 ? '🛒 Agregar al Carrito' : 'Agotado') }}</span>
               </button>
             </div>
           </div>
@@ -457,6 +457,7 @@ interface Product {
   discount?: number
   image: string
   available: boolean
+  stock?: number
   rating: number
   reviews: number
   isReserve?: boolean
@@ -1087,7 +1088,7 @@ const filteredProducts = computed(() => {
       product.price >= priceRange.value.min && 
       product.price <= priceRange.value.max
     
-    const availabilityMatch = !onlyAvailable.value || product.available
+    const availabilityMatch = !onlyAvailable.value || (product.stock && product.stock > 0)
     
     const reserveMatch = !onlyReserves.value || product.isReserve
     
@@ -1606,8 +1607,9 @@ const viewProduct = (productId: number) => {
 }
 
 .add-to-cart-btn:disabled {
-  background-color: #d1d5db;
-  cursor: not-allowed;
+  background: #000000 !important;
+  color: white !important;
+  cursor: not-allowed !important;
 }
 
 .add-to-cart-btn.added-animation {

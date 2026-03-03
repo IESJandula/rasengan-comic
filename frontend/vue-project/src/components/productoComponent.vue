@@ -15,7 +15,7 @@
         <div class="main-image">
           <img :src="currentImage" :alt="product.name" />
           <span v-if="product.discount" class="discount-badge">-{{ product.discount }}%</span>
-          <span v-if="!product.available" class="out-of-stock-badge">Agotado</span>
+          <span v-if="product.stock === 0" class="out-of-stock-badge">Agotado</span>
         </div>
         <div class="thumbnail-images">
           <img
@@ -82,18 +82,28 @@
           <div class="quantity-selector">
             <label for="quantity">Cantidad:</label>
             <div class="quantity-controls">
-              <button @click="quantity > 1 ? quantity-- : null" class="qty-btn">-</button>
-              <input v-model.number="quantity" type="number" min="1" id="quantity" />
-              <button @click="quantity++" class="qty-btn">+</button>
+              <button @click="quantity > 1 ? quantity-- : null" class="qty-btn" :disabled="product.stock === 0">-</button>
+              <input v-model.number="quantity" type="number" min="1" :max="product.stock" id="quantity" :disabled="product.stock === 0" />
+              <button @click="quantity < product.stock ? quantity++ : null" class="qty-btn" :disabled="product.stock === 0 || quantity >= product.stock">+</button>
             </div>
+          </div>
+
+          <!-- Información de stock -->
+          <div v-if="product.stock === 0" class="stock-warning">
+            <span class="stock-icon">⚠️</span>
+            <span>Producto agotado</span>
+          </div>
+          <div v-else class="stock-info">
+            <span class="stock-label">Stock disponible:</span>
+            <span class="stock-count">{{ product.stock }} unidades</span>
           </div>
 
           <button
             @click="addToCart"
-            :disabled="!product.available"
+            :disabled="product.stock === 0"
             class="add-to-cart-btn"
           >
-            🛒 {{ product.available ? 'Agregar al Carrito' : 'No Disponible' }}
+            🛒 {{ product.stock > 0 ? 'Agregar al Carrito' : 'Agotado' }}
           </button>
 
         </div>
@@ -198,6 +208,7 @@ interface Product {
   rating: number;
   reviews: number;
   available: boolean;
+  stock: number;
   description: string;
   author: string;
   publisher: string;
@@ -216,6 +227,7 @@ const product = ref<Product>({
   rating: 5,
   reviews: 145,
   available: true,
+  stock: 0,
   description: 'El volumen 100 de One Piece es un hito histórico en la serie. Esta edición especial incluye extras exclusivos, póster desplegable y cubierta holográfica. Una debe para cualquier fan de One Piece.',
   author: 'Eiichiro Oda',
   publisher: 'Planeta Manga',
@@ -291,7 +303,8 @@ const addToCart = () => {
     name: product.value.name,
     category: product.value.category,
     price: product.value.price,
-    image: product.value.images[0]
+    image: product.value.images[0],
+    stock: product.value.stock
   }, quantity.value);
   
   // Mostrar notificación toast
@@ -602,7 +615,56 @@ const viewProduct = (productId: number) => {
 }
 
 .add-to-cart-btn:disabled {
-  background-color: #d1d5db;
+  background: #000000 !important;
+  color: white !important;
+  cursor: not-allowed !important;
+}
+
+/* Stock Information */
+.stock-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  background-color: #ecfdf5;
+  border: 1px solid #d1fae5;
+  border-radius: 6px;
+  color: #065f46;
+}
+
+.stock-label {
+  font-weight: 600;
+}
+
+.stock-count {
+  color: #059669;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.stock-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  background-color: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.stock-icon {
+  font-size: 18px;
+}
+
+#quantity:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+}
+
+.qty-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
