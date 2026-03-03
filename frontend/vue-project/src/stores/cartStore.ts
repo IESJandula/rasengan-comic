@@ -10,6 +10,7 @@ export interface CartItem {
   price: number
   quantity: number
   image: string
+  stock?: number
 }
 
 const CART_STORAGE_KEY = 'rasengan_comic_cart'
@@ -96,11 +97,14 @@ export const useCartStore = defineStore('cart', () => {
     const existingItem = items.value.find(item => item.id === product.id)
     
     if (existingItem) {
-      existingItem.quantity += quantity
+      // Validar que no exceda el stock disponible
+      const maxQuantity = product.stock || 0
+      const newQuantity = Math.min(existingItem.quantity + quantity, maxQuantity)
+      existingItem.quantity = newQuantity
     } else {
       items.value.push({
         ...product,
-        quantity
+        quantity: Math.min(quantity, product.stock || 1)
       })
     }
     saveCartToStorage(items.value)
@@ -110,8 +114,11 @@ export const useCartStore = defineStore('cart', () => {
   const incrementQuantity = (itemId: number) => {
     const item = items.value.find(i => i.id === itemId)
     if (item) {
-      item.quantity++
-      saveCartToStorage(items.value)
+      const maxQuantity = item.stock || 0
+      if (item.quantity < maxQuantity) {
+        item.quantity++
+        saveCartToStorage(items.value)
+      }
     }
   }
 

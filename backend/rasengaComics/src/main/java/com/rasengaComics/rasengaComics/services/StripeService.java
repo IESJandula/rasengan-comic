@@ -16,6 +16,8 @@ import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.param.checkout.SessionListLineItemsParams;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.Optional;
 @Service
 public class StripeService {
 
+    private static final Logger logger = LoggerFactory.getLogger(StripeService.class);
     private final ProductRepository productRepository;
     private final UsuarioRepository usuarioRepository;
     private final PedidoService pedidoService;
@@ -104,12 +107,18 @@ public class StripeService {
     }
 
     public void procesarCheckoutCompletado(Session session) throws StripeException {
+        logger.info("【PROCESANDO CHECKOUT】 SessionId: {}", session.getId());
+        
         if (session == null) {
+            logger.error("【ERROR】 Session es null");
             return;
         }
 
         String usuarioUid = session.getMetadata().get("usuarioUid");
+        logger.info("【USUARIO UID】 {}", usuarioUid);
+        
         if (usuarioUid == null || usuarioUid.isBlank()) {
+            logger.error("【ERROR】 usuarioUid no encontrado en metadata");
             return;
         }
 
@@ -118,19 +127,30 @@ public class StripeService {
                 .build();
         Session fullSession = Session.retrieve(session.getId());
         LineItemCollection lineItems = fullSession.listLineItems(listParams);
+        
+        logger.info("【LINE ITEMS】 Total items en session: {}", lineItems.getData().size());
 
         List<PedidoRequest.Item> items = new ArrayList<>();
         for (LineItem lineItem : lineItems.getData()) {
+            logger.info("【Item procesado】 Quantity: {}", lineItem.getQuantity());
+            
             Price price = lineItem.getPrice();
             if (price == null) {
+                logger.warn("【SKIP】 Price es null");
                 continue;
             }
+            
             com.stripe.model.Product product = price.getProductObject();
             if (product == null || product.getMetadata() == null) {
+                logger.warn("【SKIP】 Product es null o sin metadata");
                 continue;
             }
+            
             String productoId = product.getMetadata().get("productoId");
+            logger.info("【PRODUCTO ID】 {}", productoId);
+            
             if (productoId == null) {
+                logger.warn("【SKIP】 productoId no encontrado en metadata");
                 continue;
             }
 
@@ -138,15 +158,28 @@ public class StripeService {
             pedidoItem.setProductoId(Long.parseLong(productoId));
             pedidoItem.setCantidad(lineItem.getQuantity() != null ? lineItem.getQuantity().intValue() : 1);
             items.add(pedidoItem);
+            
+            logger.info("【ITEM AGREGADO】 ProductoId: {}, Cantidad: {}", productoId, pedidoItem.getCantidad());
         }
 
+        logger.info("【TOTAL ITEMS PROCESADOS】 {}", items.size());
+        
         if (!items.isEmpty()) {
-            pedidoService.crearPedidoPagado(
-                    usuarioUid,
-                    items,
-                    session.getId(),
-                    session.getPaymentIntent()
-            );
+            logger.info("【CREANDO PEDIDO】 usuarioUid: {}, items: {}", usuarioUid, items.size());
+            try {
+                pedidoService.crearPedidoPagado(
+                        usuarioUid,
+                        items,
+                        session.getId(),
+                        session.getPaymentIntent()
+                );
+                logger.info("【PEDIDO CREADO EXITOSAMENTE】");
+            } catch (Exception e) {
+                logger.error("【ERROR AL CREAR PEDIDO】", e);
+                throw e;
+            }
+        } else {
+            logger.warn("【ADVERTENCIA】 No hay items para procesar");
         }
     }
 

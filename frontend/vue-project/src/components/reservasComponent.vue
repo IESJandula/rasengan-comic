@@ -187,144 +187,62 @@ const reservas = ref<Reserva[]>([])
 // Cargar reservas desde la API
 const loadReservas = async () => {
   loading.value = true
+  reservas.value = []
+
   try {
-    // Obtener el email del usuario autenticado
-    const userEmail = authStore.user?.email
-    
-    if (!userEmail) {
+    const userUid = authStore.user?.uid
+
+    if (!userUid) {
       console.warn('⚠️ Usuario no autenticado')
-      loadReservasEjemplo()
       return
     }
 
-    console.log('📋 Cargando reservas para usuario:', userEmail)
-    
-    // Intentar cargar por usuario específico
-    let response
-    try {
-      // Primero intentamos obtener reservas del usuario específico
-      response = await api.get('/reservas', {
-        params: {
-          email: userEmail
-        }
-      })
-    } catch (err) {
-      // Si la API no soporta parámetros, cargamos todas y filtramos
-      console.log('📌 Filtrando desde todas las reservas...')
-      response = await api.get('/reservas')
-    }
-    
-    console.log('📋 Datos de reservas desde API:', response.data)
-    
-    if (!response.data || response.data.length === 0) {
-      console.warn('⚠️ No hay reservas en la BD, mostrando datos de ejemplo')
-      loadReservasEjemplo()
-      return
-    }
-    
-    // Filtrar reservas del usuario actual
-    const reservasDelUsuario = Array.isArray(response.data) 
-      ? response.data.filter((r: any) => {
-          const resUserEmail = r.usuario?.email || r.email || ''
-          return resUserEmail.toLowerCase() === userEmail.toLowerCase()
+    console.log('📋 Cargando reservas de productos para usuario:', userUid)
+
+    const response = await api.get(`/pedidos/usuario/${userUid}`)
+    const pedidos = Array.isArray(response.data) ? response.data : []
+    const reservasDesdePedidos: Reserva[] = []
+
+    pedidos.forEach((pedido: any) => {
+      const fechaPedido = pedido?.fechaPedido || new Date().toISOString()
+      const items = Array.isArray(pedido?.items) ? pedido.items : []
+
+      items
+        .filter((item: any) => item?.reserva)
+        .forEach((item: any) => {
+          const cantidad = Number(item?.cantidad || 0)
+          const precioUnitario = Number(item?.precio || 0)
+          const nombre = item?.nombre || 'Producto en reserva'
+
+          reservasDesdePedidos.push({
+            id: `${pedido?.id ?? 'pedido'}-${item?.productoId ?? Math.random()}`,
+            producto: {
+              nombre,
+              categoria: 'Producto Reserva',
+              editorial: 'Rasengan Comics',
+              imagen: 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=400'
+            },
+            estado: 'pendiente',
+            cantidad,
+            precioUnitario,
+            total: precioUnitario * cantidad,
+            fechaReserva: fechaPedido,
+            fechaDisponibilidad: fechaPedido,
+            notas: `Reserva generada desde pedido #${pedido?.id ?? '-'}`,
+            tiempoRestante: ''
+          })
         })
-      : response.data.usuario?.email?.toLowerCase() === userEmail.toLowerCase() ? [response.data] : []
-    
-    if (reservasDelUsuario.length === 0) {
-      console.warn('⚠️ Este usuario no tiene reservas')
-      reservas.value = []
-      return
-    }
-    
-    reservas.value = reservasDelUsuario.map((r: any) => ({
-      id: String(r.id),
-      producto: {
-        nombre: r.evento?.nombre || 'Evento sin nombre',
-        categoria: 'Evento',
-        editorial: r.evento?.ubicacion || 'Sin ubicación',
-        imagen: r.evento?.imagenUrl || 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400'
-      },
-      estado: r.estado?.toLowerCase() || 'pendiente',
-      cantidad: r.personas || 1,
-      precioUnitario: 0,
-      total: 0,
-      fechaReserva: r.fechaReserva || new Date().toISOString(),
-      fechaDisponibilidad: r.fechaHora || r.fechaReserva || new Date().toISOString(),
-      notas: r.evento?.descripcion || '',
-      tiempoRestante: ''
-    }))
-    console.log('✅ Reservas cargadas:', reservas.value.length)
+    })
+
+    reservas.value = reservasDesdePedidos
+    console.log('✅ Reservas de productos cargadas:', reservas.value.length)
     updateTimers()
   } catch (err) {
     console.error('❌ Error al cargar reservas:', err)
-    console.log('📌 Usuario no autenticado o error en API')
     reservas.value = []
   } finally {
     loading.value = false
   }
-}
-
-// Función para cargar datos de ejemplo
-const loadReservasEjemplo = () => {
-  const ahora = new Date()
-  const mañana = new Date(ahora.getTime() + 24 * 60 * 60 * 1000)
-  const semana = new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000)
-  
-  reservas.value = [
-    {
-      id: '1',
-      producto: {
-        nombre: 'Torneo TCG Magic',
-        categoria: 'Evento',
-        editorial: 'Centro Cívico',
-        imagen: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400'
-      },
-      estado: 'pendiente',
-      cantidad: 2,
-      precioUnitario: 0,
-      total: 0,
-      fechaReserva: ahora.toISOString(),
-      fechaDisponibilidad: mañana.toISOString(),
-      notas: 'Trae tu mazo preferido',
-      tiempoRestante: ''
-    },
-    {
-      id: '2',
-      producto: {
-        nombre: 'Taller de Manga',
-        categoria: 'Evento',
-        editorial: 'Biblioteca Municipal',
-        imagen: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=400'
-      },
-      estado: 'disponible',
-      cantidad: 1,
-      precioUnitario: 0,
-      total: 0,
-      fechaReserva: ahora.toISOString(),
-      fechaDisponibilidad: ahora.toISOString(),
-      notas: 'Aprende técnicas de dibujo manga',
-      tiempoRestante: 'Disponible ahora'
-    },
-    {
-      id: '3',
-      producto: {
-        nombre: 'Lanzamiento One Piece Vol. 109',
-        categoria: 'Evento',
-        editorial: 'Librería Principal',
-        imagen: 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=400'
-      },
-      estado: 'pendiente',
-      cantidad: 1,
-      precioUnitario: 0,
-      total: 0,
-      fechaReserva: ahora.toISOString(),
-      fechaDisponibilidad: semana.toISOString(),
-      notas: 'Incluye firma del traductor',
-      tiempoRestante: ''
-    }
-  ]
-  console.log('✅ Datos de ejemplo cargados:', reservas.value.length)
-  updateTimers()
 }
 
 // Actualizar timers de disponibilidad

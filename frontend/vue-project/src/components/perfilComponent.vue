@@ -374,6 +374,44 @@ const loadProfileFromStorage = () => {
   }
 }
 
+// Cargar perfil del usuario desde el backend
+const loadUserProfile = async () => {
+  if (!authStore.user?.uid) return
+  
+  try {
+    const response = await api.get(`/usuarios/${authStore.user.uid}`)
+    const userData = response.data
+    
+    // Actualizar datos del usuario con los del backend
+    if (userData) {
+      user.value = {
+        ...user.value,
+        name: userData.nombre || user.value.name,
+        email: userData.email || user.value.email,
+        phone: userData.telefono || user.value.phone,
+        address: {
+          street: userData.calle || '',
+          city: userData.ciudad || '',
+          zipCode: userData.codigoPostal || '',
+          country: userData.pais || ''
+        }
+      }
+      
+      // Actualizar authStore
+      if (authStore.user) {
+        authStore.user.name = user.value.name
+      }
+      
+      // También guardar en localStorage como fallback
+      saveProfileToStorage()
+    }
+  } catch (error) {
+    console.error('Error al cargar perfil del backend:', error)
+    // Si falla, intentar cargar desde localStorage
+    loadProfileFromStorage()
+  }
+}
+
 // Estados de modales
 const showEditProfileModal = ref(false)
 const showEditAddressModal = ref(false)
@@ -419,15 +457,41 @@ const getInitials = (name: string) => {
 }
 
 // Guardar perfil
-const saveProfile = () => {
-  user.value.name = editForm.value.name
-  user.value.phone = editForm.value.phone
-  if (authStore.user) {
-    authStore.user.name = user.value.name
+const saveProfile = async () => {
+  if (!authStore.user?.uid) {
+    alert('❌ Error: No se pudo identificar al usuario')
+    return
   }
-  saveProfileToStorage()
-  showEditProfileModal.value = false
-  alert('✓ Perfil actualizado correctamente')
+  
+  try {
+    // Actualizar nombre en el endpoint de perfil
+    await api.put(`/usuarios/${authStore.user.uid}`, {
+      nombre: editForm.value.name,
+      email: user.value.email
+    })
+    
+    // Actualizar teléfono en el endpoint de dirección
+    await api.put(`/usuarios/${authStore.user.uid}/direccion`, {
+      telefono: editForm.value.phone,
+      calle: user.value.address.street,
+      ciudad: user.value.address.city,
+      codigoPostal: user.value.address.zipCode,
+      pais: user.value.address.country
+    })
+    
+    // Actualizar localmente
+    user.value.name = editForm.value.name
+    user.value.phone = editForm.value.phone
+    if (authStore.user) {
+      authStore.user.name = user.value.name
+    }
+    saveProfileToStorage()
+    showEditProfileModal.value = false
+    alert('✓ Perfil actualizado correctamente')
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error)
+    alert('❌ Error al actualizar perfil. Inténtalo de nuevo.')
+  }
 }
 
 // Editar dirección
@@ -442,11 +506,31 @@ const editAddress = () => {
 }
 
 // Guardar dirección
-const saveAddress = () => {
-  user.value.address = { ...addressForm.value }
-  saveProfileToStorage()
-  showEditAddressModal.value = false
-  alert('✓ Dirección actualizada correctamente')
+const saveAddress = async () => {
+  if (!authStore.user?.uid) {
+    alert('❌ Error: No se pudo identificar al usuario')
+    return
+  }
+  
+  try {
+    // Actualizar en el backend
+    await api.put(`/usuarios/${authStore.user.uid}/direccion`, {
+      telefono: user.value.phone,
+      calle: addressForm.value.street,
+      ciudad: addressForm.value.city,
+      codigoPostal: addressForm.value.zipCode,
+      pais: addressForm.value.country
+    })
+    
+    // Actualizar localmente
+    user.value.address = { ...addressForm.value }
+    saveProfileToStorage()
+    showEditAddressModal.value = false
+    alert('✓ Dirección actualizada correctamente')
+  } catch (error) {
+    console.error('Error al actualizar dirección:', error)
+    alert('❌ Error al actualizar dirección. Inténtalo de nuevo.')
+  }
 }
 
 // Añadir dirección
@@ -581,7 +665,27 @@ const loadCompras = async () => {
 
   try {
     const response = await api.get(`/pedidos/usuario/${authStore.user.uid}`)
-    compras.value = response.data
+    const pedidos = Array.isArray(response.data) ? response.data : []
+
+    compras.value = pedidos
+      .map((pedido: any) => {
+        const items = Array.isArray(pedido.items)
+          ? pedido.items.filter((item: any) => !item.reserva)
+          : []
+
+        const total = items.reduce((sum: number, item: any) => {
+          const precio = Number(item?.precio || 0)
+          const cantidad = Number(item?.cantidad || 0)
+          return sum + (precio * cantidad)
+        }, 0)
+
+        return {
+          ...pedido,
+          items,
+          total
+        }
+      })
+      .filter((pedido: any) => pedido.items.length > 0)
   } catch (err) {
     console.error('Error al cargar compras:', err)
     comprasError.value = 'No se pudieron cargar las compras'
@@ -614,7 +718,9 @@ onMounted(async () => {
     editForm.value.name = authStore.user.name
   }
 
-  loadProfileFromStorage()
+  // Cargar perfil desde el backend (con fallback a localStorage)
+  await loadUserProfile()
+  
   editForm.value.name = user.value.name
   editForm.value.phone = user.value.phone
   addressForm.value = { ...user.value.address }
@@ -645,12 +751,12 @@ onMounted(async () => {
 
 watch(
   () => authStore.user?.uid,
-  () => {
+  async () => {
     if (!authStore.user) return
     if (authStore.user.name) {
       user.value.name = authStore.user.name
     }
-    loadProfileFromStorage()
+    await loadUserProfile()
     editForm.value.name = user.value.name
     editForm.value.phone = user.value.phone
     addressForm.value = { ...user.value.address }

@@ -32,6 +32,9 @@ public class Product {
     private Boolean available = true;
     
     @Column(nullable = false)
+    private Integer stock = 0;
+    
+    @Column(nullable = false)
     private Double rating = 0.0;
     
     @Column(nullable = false)
@@ -57,6 +60,7 @@ public class Product {
         this.discount = discount;
         this.image = image;
         this.available = available;
+        this.stock = 0;
         this.rating = rating;
         this.reviews = reviews;
         this.isReserve = isReserve;
@@ -134,6 +138,14 @@ public class Product {
     
     public void setAvailable(Boolean available) {
         this.available = available;
+    }
+    
+    public Integer getStock() {
+        return stock;
+    }
+    
+    public void setStock(Integer stock) {
+        this.stock = stock;
     }
     
     public Double getRating() {

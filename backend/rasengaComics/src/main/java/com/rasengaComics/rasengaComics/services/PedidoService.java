@@ -11,6 +11,9 @@ import com.rasengaComics.rasengaComics.repositories.ProductRepository;
 import com.rasengaComics.rasengaComics.repositories.ProductoRepository;
 import com.rasengaComics.rasengaComics.repositories.DetallePedidoRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.Optional;
 @Service
 public class PedidoService {
 
+    private static final Logger logger = LoggerFactory.getLogger(PedidoService.class);
     private final PedidoRepository pedidoRepository;
     private final UsuarioRepository usuarioRepository;
     private final ProductRepository productRepository;
@@ -91,21 +95,28 @@ public class PedidoService {
         return pedidoGuardado;
     }
 
+    @Transactional
     public Pedido crearPedidoPagado(String usuarioUid,
                                     List<com.rasengaComics.rasengaComics.dto.request.PedidoRequest.Item> items,
                                     String stripeSessionId,
                                     String stripePaymentIntentId) {
+        logger.info("【CREAR PEDIDO PAGADO】 usuarioUid: {}, items: {}, sessionId: {}", usuarioUid, items.size(), stripeSessionId);
+        
         Optional<Pedido> existente = pedidoRepository.findByStripeSessionId(stripeSessionId);
         if (existente.isPresent()) {
+            logger.warn("【PEDIDO DUPLICADO】 Ya existe pedido con sessionId: {}", stripeSessionId);
             return existente.get();
         }
 
         Optional<Usuario> optUsuario = usuarioRepository.findById(usuarioUid);
         if (optUsuario.isEmpty()) {
+            logger.error("【ERROR】 Usuario no encontrado: {}", usuarioUid);
             throw new IllegalArgumentException("Usuario no encontrado");
         }
 
         Usuario usuario = optUsuario.get();
+        logger.info("【USUARIO ENCONTRADO】 {} ({})", usuario.getNombre(), usuarioUid);
+        
         Pedido pedido = new Pedido();
         pedido.setUsuario(usuario);
         pedido.setFechaPedido(LocalDateTime.now());
@@ -114,19 +125,55 @@ public class PedidoService {
         pedido.setStripePaymentIntentId(stripePaymentIntentId);
 
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
+        logger.info("【PEDIDO GUARDADO】 ID: {}", pedidoGuardado.getId());
+        
         double total = 0.0;
 
         for (com.rasengaComics.rasengaComics.dto.request.PedidoRequest.Item item : items) {
-            // Buscar en la tabla products (no productos)
+            logger.info("【PROCESANDO ITEM】 ProductoId: {}, Cantidad: {}", item.getProductoId(), item.getCantidad());
+            
+            // Buscar en la tabla products (ÚNICA tabla de productos)
             Optional<Product> optProduct = productRepository.findById(item.getProductoId());
             if (optProduct.isPresent()) {
                 Product product = optProduct.get();
+                logger.info("【PRODUCTO ENCONTRADO】 {}", product.getName());
+
+                Integer cantidad = item.getCantidad();
+                if (cantidad == null || cantidad <= 0) {
+                    logger.error("【ERROR】 Cantidad inválida: {}", cantidad);
+                    throw new IllegalArgumentException("Cantidad inválida para el producto: " + item.getProductoId());
+                }
+
+                int stockActual = product.getStock() != null ? product.getStock() : 0;
+                logger.info("【STOCK ACTUAL】 {}, Solicitado: {}", stockActual, cantidad);
                 
-                // Buscar o crear el producto correspondiente en la tabla productos
+                if (stockActual < cantidad) {
+                    logger.error("【ERROR】 Stock insuficiente");
+                    throw new IllegalArgumentException(
+                            "Stock insuficiente para el producto " + product.getName() +
+                            ". Disponible: " + stockActual + ", solicitado: " + cantidad
+                    );
+                }
+
+                product.setStock(stockActual - cantidad);
+                productRepository.save(product);
+                logger.info("【STOCK ACTUALIZADO】 Nuevo stock: {}", product.getStock());
+                
+                // CAMBIO: Usar SOLO la tabla productos manteniendo sincronía
+                // Buscar o crear el producto en tabla productos usando el MISMO ID de products
                 Optional<Producto> optProducto = productoRepository.findById(item.getProductoId());
                 Producto producto;
                 if (optProducto.isPresent()) {
+                    // Actualizar producto existente con datos de products
                     producto = optProducto.get();
+                    logger.info("【PRODUCTO EXISTE EN PRODUCTOS】 ID: {}, Nombre anterior: {}", producto.getId(), producto.getNombre());
+                    // Actualizar con los datos correctos de la tabla products
+                    producto.setNombre(product.getName());
+                    producto.setDescripcion(product.getCategory() + (product.getSubcategory() != null ? " - " + product.getSubcategory() : ""));
+                    producto.setPrecio(product.getPrice());
+                    producto.setStock(product.getStock());
+                    producto = productoRepository.save(producto);
+                    logger.info("【PRODUCTO SINCRONIZADO】 Nombre actualizado a: {}", producto.getNombre());
                 } else {
                     // Crear producto en tabla productos desde product si no existe
                     producto = new Producto();
@@ -134,22 +181,29 @@ public class PedidoService {
                     producto.setNombre(product.getName());
                     producto.setDescripcion(product.getCategory() + (product.getSubcategory() != null ? " - " + product.getSubcategory() : ""));
                     producto.setPrecio(product.getPrice());
-                    producto.setStock(100); // Stock por defecto
+                    producto.setStock(product.getStock());
                     producto = productoRepository.save(producto);
+                    logger.info("【PRODUCTO CREADO EN TABLA productos】 ID: {}, Nombre: {}", producto.getId(), producto.getNombre());
                 }
                 
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedidoGuardado);
                 detalle.setProducto(producto);
-                detalle.setCantidad(item.getCantidad());
+                detalle.setCantidad(cantidad);
                 detalle.setPrecioUnitario(product.getPrice());
                 detallePedidoRepository.save(detalle);
-                total += product.getPrice() * item.getCantidad();
+                logger.info("【DETALLE PEDIDO GUARDADO】");
+                
+                total += product.getPrice() * cantidad;
+            } else {
+                logger.warn("【ADVERTENCIA】 Producto no encontrado: {}", item.getProductoId());
             }
         }
 
         pedidoGuardado.setTotal(total);
-        return pedidoRepository.save(pedidoGuardado);
+        Pedido resultado = pedidoRepository.save(pedidoGuardado);
+        logger.info("【PEDIDO FINALIZADO】 ID: {}, Total: {}", resultado.getId(), total);
+        return resultado;
     }
 
     // Actualizar estado

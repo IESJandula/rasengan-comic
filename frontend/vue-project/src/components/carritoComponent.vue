@@ -48,6 +48,36 @@
         <div class="cart-summary">
           <h2>Resumen del Pedido</h2>
 
+          <!-- Método de Entrega (solo si está logueado) -->
+          <div v-if="authStore.isAuthenticated" class="delivery-section">
+            <h3 class="delivery-title">Método de Entrega</h3>
+            <select v-model="deliveryMethod" class="delivery-select">
+              <option value="envio">📦 Envío a domicilio</option>
+              <option value="tienda">🏪 Recogida en tienda</option>
+            </select>
+
+            <!-- Dirección de envío -->
+            <div v-if="deliveryMethod === 'envio'" class="address-section">
+              <div v-if="userAddress" class="address-card-small">
+                <p class="address-label">📍 Dirección de envío:</p>
+                <p class="address-text">{{ userAddress.street }}</p>
+                <p class="address-text">{{ userAddress.city }}, {{ userAddress.zipCode }}</p>
+                <p class="address-text">{{ userAddress.country }}</p>
+                <router-link to="/perfil" class="edit-address-link">Editar dirección</router-link>
+              </div>
+              <div v-else class="no-address-warning">
+                <p>⚠️ No tienes dirección registrada</p>
+                <router-link to="/perfil" class="add-address-link">Añadir dirección</router-link>
+              </div>
+            </div>
+
+            <!-- Info de recogida en tienda -->
+            <div v-else class="store-pickup-info">
+              <p class="store-info">📍 Calle Ejemplo 123, Madrid</p>
+              <p class="store-info">⏰ Lun-Vie: 10:00-20:00, Sáb: 10:00-14:00</p>
+            </div>
+          </div>
+
           <div class="summary-item">
             <span>Subtotal</span>
             <span>{{ subtotal.toFixed(2) }}€</span>
@@ -60,15 +90,16 @@
 
           <div class="summary-item">
             <span>Envío</span>
-            <span v-if="subtotal > 50" class="free-shipping">Gratis</span>
-            <span v-else>{{ shipping.toFixed(2) }}€</span>
+            <span v-if="deliveryMethod === 'tienda'" class="free-shipping">Gratis (Recogida en tienda)</span>
+            <span v-else-if="subtotal > 50" class="free-shipping">Gratis</span>
+            <span v-else>{{ calculatedShipping.toFixed(2) }}€</span>
           </div>
 
           <div class="summary-divider"></div>
 
           <div class="summary-total">
             <span>Total</span>
-            <span>{{ total.toFixed(2) }}€</span>
+            <span>{{ calculatedTotal.toFixed(2) }}€</span>
           </div>
 
           <div class="promo-code">
@@ -76,8 +107,13 @@
             <button @click="applyPromo" class="apply-btn">Aplicar</button>
           </div>
 
-          <button @click="checkout" class="checkout-btn">
-            Ir a Pagar
+          <button 
+            @click="checkout" 
+            class="checkout-btn"
+            :disabled="isCheckoutDisabled"
+            :class="{ 'disabled': isCheckoutDisabled }"
+          >
+            {{ checkoutButtonText }}
           </button>
 
           <router-link to="/catalogo" class="continue-shopping-link">
@@ -116,11 +152,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'vue-router'
-import { ref } from 'vue'
 import { loadStripe } from '@stripe/stripe-js'
 import api from '@/api/axios'
 
@@ -138,6 +173,92 @@ const total = computed(() => cartStore.total)
 const promoCode = ref('')
 const showAuthModal = ref(false)
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+const deliveryMethod = ref<'envio' | 'tienda'>('envio')
+
+// Dirección del usuario (ahora cargada desde el backend)
+const userAddress = ref<{
+  street: string
+  city: string
+  zipCode: string
+  country: string
+} | null>(null)
+
+// Cargar dirección del usuario desde el backend
+const loadUserAddress = async () => {
+  if (!authStore.isAuthenticated || !authStore.user?.uid) {
+    userAddress.value = null
+    return
+  }
+  
+  try {
+    const response = await api.get(`/usuarios/${authStore.user.uid}`)
+    const userData = response.data
+    
+    // Solo cargar dirección si todos los campos están completos
+    if (userData.calle && userData.ciudad && userData.codigoPostal && userData.pais) {
+      userAddress.value = {
+        street: userData.calle,
+        city: userData.ciudad,
+        zipCode: userData.codigoPostal,
+        country: userData.pais
+      }
+    } else {
+      userAddress.value = null
+    }
+  } catch (error) {
+    console.error('Error al cargar dirección del usuario:', error)
+    userAddress.value = null
+  }
+}
+
+// Cargar dirección cuando el componente se monta
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    loadUserAddress()
+  }
+})
+
+// Observar cambios en la autenticación
+watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+  if (isAuthenticated) {
+    loadUserAddress()
+  } else {
+    userAddress.value = null
+  }
+})
+
+// Calcular envío según el método de entrega
+const calculatedShipping = computed(() => {
+  if (deliveryMethod.value === 'tienda') {
+    return 0
+  }
+  if (subtotal.value > 50) {
+    return 0
+  }
+  return shipping.value
+})
+
+// Calcular total con el envío correcto
+const calculatedTotal = computed(() => {
+  return subtotal.value + taxes.value + calculatedShipping.value
+})
+
+// Validar si se puede proceder al pago
+const isCheckoutDisabled = computed(() => {
+  if (!authStore.isAuthenticated) return false // Mostrará el modal
+  if (deliveryMethod.value === 'envio' && !userAddress.value) return true
+  if (cartItems.value.length === 0) return true
+  return false
+})
+
+// Texto del botón de pago
+const checkoutButtonText = computed(() => {
+  if (!authStore.isAuthenticated) return 'Ir a Pagar'
+  if (deliveryMethod.value === 'envio' && !userAddress.value) {
+    return 'Añade una dirección para continuar'
+  }
+  return 'Ir a Pagar'
+})
 
 const incrementQuantity = (itemId: number) => {
   cartStore.incrementQuantity(itemId)
@@ -171,6 +292,13 @@ const checkout = async () => {
     return
   }
 
+  // Validar dirección si el método es envío
+  if (deliveryMethod.value === 'envio' && !userAddress.value) {
+    alert('Por favor, añade una dirección de envío en tu perfil antes de continuar.')
+    router.push('/perfil')
+    return
+  }
+
   if (!authStore.user?.uid) {
     console.error('❌ No se encontró el UID del usuario')
     alert('No se pudo identificar el usuario')
@@ -184,6 +312,7 @@ const checkout = async () => {
 
   console.log('✅ Usuario válido, preparando payload...')
   console.log('📦 Items en el carrito:', cartItems.value.map(item => ({ id: item.id, name: item.name, quantity: item.quantity })))
+  console.log('🚚 Método de entrega:', deliveryMethod.value)
 
   try {
     // Validar que todos los productos existen antes de enviar
@@ -208,6 +337,8 @@ const checkout = async () => {
       usuarioUid: authStore.user.uid,
       usuarioEmail: authStore.user.email,
       usuarioNombre: authStore.user.name,
+      metodoEntrega: deliveryMethod.value,
+      direccionEnvio: deliveryMethod.value === 'envio' ? userAddress.value : null,
       items: cartItems.value.map((item) => ({
         productoId: item.id,
         cantidad: item.quantity
@@ -921,5 +1052,129 @@ const closeAuthModal = () => {
     font-size: 14px;
     padding: 13px;
   }
+}
+
+/* Estilos para método de entrega */
+.delivery-section {
+  background-color: #f9fafb;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.delivery-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 12px 0;
+}
+
+.delivery-select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 15px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.delivery-select:hover {
+  border-color: #dc2626;
+}
+
+.delivery-select:focus {
+  outline: none;
+  border-color: #dc2626;
+}
+
+.address-section {
+  margin-top: 15px;
+}
+
+.address-card-small {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.address-label {
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.address-text {
+  color: #6b7280;
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.edit-address-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: #dc2626;
+  font-size: 13px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.edit-address-link:hover {
+  text-decoration: underline;
+}
+
+.no-address-warning {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 15px;
+  text-align: center;
+}
+
+.no-address-warning p {
+  color: #dc2626;
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.add-address-link {
+  display: inline-block;
+  color: #dc2626;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.add-address-link:hover {
+  text-decoration: underline;
+}
+
+.store-pickup-info {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  margin-top: 15px;
+}
+
+.store-info {
+  color: #6b7280;
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+.checkout-btn.disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.checkout-btn.disabled:hover {
+  background-color: #9ca3af;
+  transform: none;
 }
 </style>
