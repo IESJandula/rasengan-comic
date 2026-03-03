@@ -45,6 +45,7 @@ public class PedidoResponse {
         private String nombre;
         private Double precio;
         private Integer cantidad;
+        private Boolean reserva;
 
         public Item() {}
 
@@ -59,6 +60,9 @@ public class PedidoResponse {
 
         public Integer getCantidad() { return cantidad; }
         public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
+
+        public Boolean getReserva() { return reserva; }
+        public void setReserva(Boolean reserva) { this.reserva = reserva; }
     }
 }
 

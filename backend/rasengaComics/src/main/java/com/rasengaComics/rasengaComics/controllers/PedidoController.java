@@ -7,6 +7,7 @@ import com.rasengaComics.rasengaComics.models.Usuario;
 import com.rasengaComics.rasengaComics.dto.request.PedidoRequest;
 import com.rasengaComics.rasengaComics.dto.response.PedidoResponse;
 import com.rasengaComics.rasengaComics.dto.response.ApiResponse;
+import com.rasengaComics.rasengaComics.repositories.ProductRepository;
 import com.rasengaComics.rasengaComics.repositories.UsuarioRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +24,14 @@ public class PedidoController {
 
     private final PedidoService pedidoService;
     private final UsuarioRepository usuarioRepository;
+    private final ProductRepository productRepository;
 
-    public PedidoController(PedidoService pedidoService, UsuarioRepository usuarioRepository) {
+    public PedidoController(PedidoService pedidoService,
+                           UsuarioRepository usuarioRepository,
+                           ProductRepository productRepository) {
         this.pedidoService = pedidoService;
         this.usuarioRepository = usuarioRepository;
+        this.productRepository = productRepository;
     }
 
     @PostMapping
@@ -126,6 +131,10 @@ public class PedidoController {
             item.setNombre(detalle.getProducto().getNombre());
             item.setPrecio(detalle.getPrecioUnitario());
             item.setCantidad(detalle.getCantidad());
+            boolean isReserva = productRepository.findById(detalle.getProducto().getId())
+                    .map(product -> Boolean.TRUE.equals(product.getIsReserve()))
+                    .orElse(false);
+            item.setReserva(isReserva);
             return item;
         }).collect(Collectors.toList());
     }

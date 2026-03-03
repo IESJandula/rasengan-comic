@@ -665,7 +665,27 @@ const loadCompras = async () => {
 
   try {
     const response = await api.get(`/pedidos/usuario/${authStore.user.uid}`)
-    compras.value = response.data
+    const pedidos = Array.isArray(response.data) ? response.data : []
+
+    compras.value = pedidos
+      .map((pedido: any) => {
+        const items = Array.isArray(pedido.items)
+          ? pedido.items.filter((item: any) => !item.reserva)
+          : []
+
+        const total = items.reduce((sum: number, item: any) => {
+          const precio = Number(item?.precio || 0)
+          const cantidad = Number(item?.cantidad || 0)
+          return sum + (precio * cantidad)
+        }, 0)
+
+        return {
+          ...pedido,
+          items,
+          total
+        }
+      })
+      .filter((pedido: any) => pedido.items.length > 0)
   } catch (err) {
     console.error('Error al cargar compras:', err)
     comprasError.value = 'No se pudieron cargar las compras'
