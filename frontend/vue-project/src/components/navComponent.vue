@@ -1,14 +1,45 @@
 <template>
   <nav class="navbar">
+    <!-- Overlay para cerrar el menú al hacer clic fuera -->
+    <div class="menu-overlay" :class="{ active: isMenuOpen }" @click="closeMenu"></div>
+    
     <div class="nav-container">
+      <!-- Botón hamburguesa para móvil -->
+      <button class="hamburger-button" @click="toggleMenu" :class="{ active: isMenuOpen }">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
       <router-link to="/" class="navbar-logo">
         <img src="@/assets/img_logo.png" alt="Logo" />
       </router-link>
 
-      <ul class="navbar-menu">
-        <li><router-link to="/tienda" class="nav-link">Tienda</router-link></li>
-        <li><router-link to="/eventos" class="nav-link">Eventos</router-link></li>
-        <li v-if="authStore.isAuthenticated"><router-link to="/reservas" class="nav-link">Reservas</router-link></li>
+      <ul class="navbar-menu" :class="{ 'menu-open': isMenuOpen }">
+        <li class="mobile-home-item"><router-link to="/" class="nav-link" @click="closeMenu">🏠 Inicio</router-link></li>
+        <li><router-link to="/tienda" class="nav-link" @click="closeMenu">Tienda</router-link></li>
+        <li><router-link to="/eventos" class="nav-link" @click="closeMenu">Eventos</router-link></li>
+        
+        <!-- Carrito en móvil -->
+        <li class="mobile-cart-item">
+          <router-link to="/carrito" class="nav-link mobile-cart-link" @click="closeMenu">
+            🛒 Carrito
+            <span v-if="cartCount > 0" class="mobile-cart-count">({{ cartCount }})</span>
+          </router-link>
+        </li>
+
+        <!-- Opciones de usuario en móvil -->
+        <li v-if="authStore.isAuthenticated && authStore.user" class="mobile-user-item">
+          <router-link to="/perfil" class="nav-link" @click="closeMenu">👤 Mi Perfil</router-link>
+          <router-link to="/perfil?tab=compras" class="nav-link" @click="closeMenu">🛍️ Mis Compras</router-link>
+          <router-link v-if="isAdmin" to="/admin" class="nav-link" @click="closeMenu">⚙️ Admin Panel</router-link>
+          <button @click="logout(); closeMenu()" class="nav-link logout-link">🚪 Cerrar Sesión</button>
+        </li>
+
+        <li v-if="!authStore.isAuthenticated" class="mobile-auth-item">
+          <button @click="goToLogin(); closeMenu()" class="mobile-login-button">👤 Iniciar Sesión</button>
+          <button @click="goToRegister(); closeMenu()" class="mobile-register-button">📝 Registrarse</button>
+        </li>
       </ul>
 
       <!-- Barra de búsqueda -->
@@ -22,7 +53,6 @@
             class="search-input"
             @keyup.enter="handleSearch"
             @input="performLiveSearch(searchQuery)"
-            @blur="setTimeout(() => showSearchResults = false, 200)"
           />
           <button 
             v-if="searchQuery" 
@@ -40,7 +70,6 @@
               class="search-result-item"
               @click="selectSearchResult(product)"
             >
-              <img :src="product.image" :alt="product.name" class="result-image" />
               <div class="result-info">
                 <div class="result-name">{{ product.name }}</div>
                 <div class="result-category">{{ product.category }}</div>
@@ -78,7 +107,6 @@
             <router-link to="/perfil" class="dropdown-item">👤 Mi Perfil</router-link>
             <router-link to="/carrito" class="dropdown-item">🛒 Carrito</router-link>
             <router-link to="/perfil?tab=compras" class="dropdown-item">🛍️ Mis Compras</router-link>
-            <router-link to="/reservas" class="dropdown-item">📅 Mis Reservas</router-link>
             <router-link v-if="isAdmin" to="/admin" class="dropdown-item admin-link">⚙️ Admin Panel</router-link>
             <div class="dropdown-divider"></div>
             <button @click="logout" class="dropdown-item logout">🚪 Cerrar Sesión</button>
@@ -111,6 +139,15 @@ const imageError = ref(false)
 const searchQuery = ref('')
 const searchResults = ref<any[]>([])
 const showSearchResults = ref(false)
+const isMenuOpen = ref(false)
+
+const toggleMenu = (): void => {
+  isMenuOpen.value = !isMenuOpen.value
+}
+
+const closeMenu = (): void => {
+  isMenuOpen.value = false
+}
 
 // Avatar por defecto
 const defaultAvatar = 'https://ui-avatars.com/api/?name=Usuario&background=dc2626&color=fff&size=128'
@@ -217,6 +254,24 @@ const selectSearchResult = (product: any): void => {
   z-index: 100;
 }
 
+.menu-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.menu-overlay.active {
+  display: block;
+  opacity: 1;
+}
+
 .nav-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -249,6 +304,42 @@ const selectSearchResult = (product: any): void => {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.7);
 }
 
+/* Botón hamburguesa */
+.hamburger-button {
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 30px;
+  height: 25px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1001;
+}
+
+.hamburger-button span {
+  width: 100%;
+  height: 3px;
+  background-color: white;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.hamburger-button.active span:nth-child(1) {
+  transform: rotate(45deg) translateY(8px);
+}
+
+.hamburger-button.active span:nth-child(2) {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.hamburger-button.active span:nth-child(3) {
+  transform: rotate(-45deg) translateY(-8px);
+}
+
 .navbar-menu {
   display: flex;
   list-style: none;
@@ -256,6 +347,13 @@ const selectSearchResult = (product: any): void => {
   padding: 0;
   gap: 30px;
   flex-shrink: 0;
+}
+
+.mobile-auth-item,
+.mobile-home-item,
+.mobile-cart-item,
+.mobile-user-item {
+  display: none;
 }
 
 .nav-link {
@@ -383,13 +481,6 @@ const selectSearchResult = (product: any): void => {
 
 .search-result-item:hover {
   background-color: #f9fafb;
-}
-
-.result-image {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 4px;
 }
 
 .result-info {
@@ -637,25 +728,184 @@ const selectSearchResult = (product: any): void => {
   .nav-container {
     gap: 12px;
     padding: 0 15px;
-  }
-
-  .navbar-logo img {
-    height: 40px;
-    border: 2px solid black;
-  }
-
-  .navbar-menu {
-    flex: initial;
-    gap: 8px;
+    position: relative;
     justify-content: flex-start;
   }
 
-  .nav-link {
-    font-size: 14px;
-    padding: 6px 10px;
+  /* Ocultar logo en móviles */
+  .navbar-logo {
+    display: none;
   }
 
+  /* Mostrar botón hamburguesa a la izquierda */
+  .hamburger-button {
+    display: flex;
+    order: -1;
+  }
+
+  /* Buscador en móviles */
   .search-bar {
+    flex: 1;
+    max-width: none;
+    margin: 0;
+    margin-left: auto;
+  }
+
+  .search-wrapper {
+    padding: 0 12px;
+  }
+
+  .search-input {
+    font-size: 13px;
+    padding: 10px 0;
+  }
+
+  .search-input::placeholder {
+    font-size: 12px;
+  }
+
+  .search-icon {
+    font-size: 16px;
+  }
+
+  /* Menú móvil desde la izquierda */
+  .navbar-menu {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    width: 280px;
+    background-color: #dc2626;
+    flex-direction: column;
+    gap: 0;
+    padding: 80px 0 20px 0;
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.3);
+    transition: left 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+  }
+
+  .navbar-menu.menu-open {
+    left: 0;
+  }
+
+  .navbar-menu li {
+    width: 100%;
+  }
+
+  .nav-link {
+    display: block;
+    width: 100%;
+    font-size: 16px;
+    padding: 16px 24px;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-link:hover {
+    background-color: #b91c1c;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Mostrar auth, inicio, carrito y usuario en móvil */
+  .mobile-auth-item,
+  .mobile-home-item,
+  .mobile-cart-item,
+  .mobile-user-item {
+    display: block;
+    width: 100%;
+    padding: 16px 24px;
+  }
+
+  .mobile-home-item,
+  .mobile-cart-item {
+    padding: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .mobile-cart-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-cart-count {
+    background-color: #fbbf24;
+    color: #1f2937;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: bold;
+  }
+
+  .mobile-user-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .mobile-user-item .nav-link {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .mobile-user-item .nav-link:last-child {
+    border-bottom: none;
+  }
+
+  .logout-link {
+    width: 100%;
+    text-align: left;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .logout-link:hover {
+    background-color: #b91c1c;
+  }
+
+  .mobile-auth-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobile-login-button,
+  .mobile-register-button {
+    width: 100%;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    padding: 12px 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-login-button {
+    color: #dc2626;
+    background-color: white;
+  }
+
+  .mobile-login-button:hover {
+    background-color: #f3f4f6;
+  }
+
+  .mobile-register-button {
+    background-color: transparent;
+    color: white;
+    border: 2px solid white;
+  }
+
+  .mobile-register-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Ocultar búsqueda desktop */
+  .desktop-search {
     display: none;
   }
 
@@ -687,13 +937,12 @@ const selectSearchResult = (product: any): void => {
   }
 
   .user-not-logged {
-    gap: 8px;
+    display: none;
   }
 
-  .login-button,
-  .register-button {
-    font-size: 13px;
-    padding: 7px 14px;
+  /* Ocultar carrito y sección de usuario en móviles */
+  .user-section {
+    display: none;
   }
 }
 
@@ -705,63 +954,23 @@ const selectSearchResult = (product: any): void => {
   .nav-container {
     gap: 10px;
     padding: 0 12px;
-    flex-wrap: wrap;
-  }
-
-  .navbar-logo {
-    order: 1;
-  }
-
-  .user-section {
-    order: 2;
-    margin-left: auto;
-  }
-
-  .navbar-menu {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .search-bar {
-    order: 4;
-    display: flex;
-    width: 100%;
-    max-width: 100%;
-    margin: 8px 0 0 0;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .search-wrapper {
-    padding: 0 12px;
-  }
-
-  .search-input {
-    padding: 10px 0;
-    font-size: 13px;
-  }
-
-  .search-icon {
-    font-size: 15px;
-    margin-right: 8px;
-  }
-
-  .clear-button {
-    width: 22px;
-    height: 22px;
-    font-size: 12px;
   }
 
   .navbar-logo img {
     height: 36px;
   }
 
+  .navbar-menu {
+    width: 260px;
+  }
+
   .nav-link {
-    font-size: 13px;
-    padding: 6px 12px;
+    font-size: 15px;
+    padding: 14px 20px;
+  }
+
+  .mobile-auth-item {
+    padding: 12px 20px;
   }
 
   .cart-link {
@@ -797,20 +1006,6 @@ const selectSearchResult = (product: any): void => {
     padding: 10px 12px;
     font-size: 13px;
   }
-
-  .user-not-logged {
-    gap: 6px;
-  }
-
-  .login-button {
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-
-  .register-button {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
 }
 
 @media (max-width: 360px) {
@@ -822,15 +1017,17 @@ const selectSearchResult = (product: any): void => {
     height: 32px;
   }
 
-  .nav-link {
-    font-size: 12px;
-    padding: 5px 10px;
+  .navbar-menu {
+    width: 240px;
   }
 
-  .login-button,
-  .register-button {
-    font-size: 11px;
-    padding: 5px 8px;
+  .nav-link {
+    font-size: 14px;
+    padding: 12px 16px;
+  }
+
+  .mobile-auth-item {
+    padding: 10px 16px;
   }
 
   .dropdown-menu {

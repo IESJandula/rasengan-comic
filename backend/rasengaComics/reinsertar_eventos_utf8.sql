@@ -1,13 +1,16 @@
--- Script para insertar eventos con codificación UTF-8
+-- Script para reinsertar eventos con codificación UTF-8 correcta
+-- Ejecutar este script desde MySQL/MariaDB después de configurar UTF-8
 
--- Asegurarse de que la base de datos y tabla usen UTF-8
-ALTER DATABASE IF EXISTS rasengan_comics_database CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-ALTER TABLE IF EXISTS evento CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- Primero, asegurarse de que la base de datos use UTF-8
+ALTER DATABASE rasengan_comics_database CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Modificar la tabla eventos para usar UTF-8
+ALTER TABLE evento CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Borrar eventos existentes
 DELETE FROM evento;
 
--- Insertar nuevos eventos
+-- Reinsertar eventos con codificación correcta
 INSERT INTO evento (nombre, descripcion, fecha_hora, ubicacion, imagen_url) VALUES
 ('Torneo TCG Magic: The Gathering', 'Competición oficial de Magic con premios para los 3 primeros puestos. Formato Standard. Inscripción limitada a 32 jugadores.', '2026-02-15 18:00:00', 'Sala Principal', 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=400'),
 

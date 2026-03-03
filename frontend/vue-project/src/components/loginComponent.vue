@@ -3,8 +3,7 @@
     <div class="login-wrapper">
       <!-- Formulario de Login -->
       <div class="login-form-container">
-        <h1 class="login-title">Rasengan Comics</h1>
-        <p class="login-subtitle">Inicia sesión en tu cuenta</p>
+        <h1 class="login-title">Inicia sesión:</h1>
 
         <form @submit.prevent="handleLogin" class="login-form">
           <!-- Email -->
@@ -65,18 +64,6 @@
           <a href="#" class="link">¿Olvidaste tu contraseña?</a>
         </div>
 
-        <!-- Divider -->
-        <div class="divider">O continúa con</div>
-
-        <!-- Login Social -->
-        <div class="social-login">
-          <button type="button" class="social-button google">
-            <span>Google</span>
-          </button>
-          <button type="button" class="social-button facebook">
-            <span>Facebook</span>
-          </button>
-        </div>
       </div>
 
       <!-- Imagen lateral -->
@@ -172,7 +159,7 @@ const goToRegister = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: clamp(12px, 3vw, 24px);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -182,28 +169,30 @@ const goToRegister = () => {
   max-width: 1000px;
   background-color: white;
   border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   overflow: hidden;
 }
 
 .login-form-container {
   flex: 1;
-  padding: 60px 40px;
+  padding: clamp(28px, 5vw, 60px) clamp(24px, 4vw, 40px);
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfcff 100%);
 }
 
 .login-title {
   font-size: 32px;
-  font-weight: bold;
+  font-weight: 700;
   color: #1f2937;
-  margin-bottom: 10px;
-}
-
-.login-title::before {
-  content: '🔴 ';
-  color: #dc2626;
+  margin-bottom: 18px;
+  text-align: center;
+  width: 100%;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .login-subtitle {
@@ -216,6 +205,9 @@ const goToRegister = () => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
 }
 
 .form-group {
@@ -235,8 +227,13 @@ const goToRegister = () => {
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   font-size: 16px;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   font-family: inherit;
+  background-color: #ffffff;
+}
+
+.form-input:hover {
+  border-color: #d1d5db;
 }
 
 .form-input:focus {
@@ -264,6 +261,12 @@ const goToRegister = () => {
   cursor: pointer;
   font-size: 18px;
   padding: 5px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.password-toggle:hover {
+  background-color: #f3f4f6;
 }
 
 .remember-me {
@@ -271,7 +274,7 @@ const goToRegister = () => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: #6b7280;
+  color: #4b5563;
   font-size: 14px;
   margin-top: 5px;
 }
@@ -300,9 +303,11 @@ const goToRegister = () => {
   border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: 0.2px;
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 10px;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.2);
 }
 
 .login-button:hover:not(:disabled) {
@@ -322,9 +327,11 @@ const goToRegister = () => {
 .login-links {
   display: flex;
   justify-content: space-between;
-  margin-top: 20px;
+  margin: 24px auto 0;
   gap: 10px;
   flex-wrap: wrap;
+  width: 100%;
+  max-width: 420px;
 }
 
 .link {
@@ -338,61 +345,6 @@ const goToRegister = () => {
 .link:hover {
   color: #b91c1c;
   text-decoration: underline;
-}
-
-.divider {
-  text-align: center;
-  color: #d1d5db;
-  margin: 30px 0 20px 0;
-  position: relative;
-}
-
-.divider::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 100%;
-  height: 1px;
-  background-color: #e5e7eb;
-  z-index: -1;
-}
-
-.divider {
-  background-color: white;
-  padding: 0 10px;
-  display: inline-block;
-  width: 100%;
-}
-
-.social-login {
-  display: flex;
-  gap: 12px;
-}
-
-.social-button {
-  flex: 1;
-  padding: 12px;
-  border: 2px solid #e5e7eb;
-  background-color: white;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 14px;
-}
-
-.social-button:hover {
-  border-color: #dc2626;
-  background-color: #fef2f2;
-}
-
-.social-button.google {
-  color: #1f2937;
-}
-
-.social-button.facebook {
-  color: #1877f2;
 }
 
 .login-image {

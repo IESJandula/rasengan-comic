@@ -3,6 +3,7 @@ package com.rasengaComics.rasengaComics.services;
 import com.rasengaComics.rasengaComics.models.CodigoDescuento;
 import com.rasengaComics.rasengaComics.repositories.CodigoDescuentoRepository;
 import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,14 +33,28 @@ public class CodigoDescuentoService {
     }
 
     public Optional<CodigoDescuento> obtenerPorCodigo(String codigo) {
-        return codigoRepository.findByCodigo(codigo);
+        return codigoRepository.findByCode(codigo);
     }
 
     public boolean validarCodigo(String codigo) {
-        Optional<CodigoDescuento> optCodigo = codigoRepository.findByCodigo(codigo);
+        Optional<CodigoDescuento> optCodigo = codigoRepository.findByCode(codigo);
         if (optCodigo.isEmpty()) return false;
+        
         CodigoDescuento cd = optCodigo.get();
-        return cd.getActivo() && cd.getUsosRestantes() > 0;
+        LocalDateTime now = LocalDateTime.now();
+        
+        // Validar que esté activo, dentro de las fechas válidas
+        return cd.getActivo() 
+            && cd.getStartDate().isBefore(now) 
+            && cd.getEndDate().isAfter(now);
+    }
+
+    public Double calcularDescuento(CodigoDescuento codigo, Double precio) {
+        if (codigo.getType().equals("percentage")) {
+            return precio * (codigo.getValue() / 100.0);
+        } else {
+            return Math.min(codigo.getValue(), precio);
+        }
     }
 }
 

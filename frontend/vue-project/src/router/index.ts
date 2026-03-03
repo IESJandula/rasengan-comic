@@ -10,6 +10,10 @@ import perfilComponent from '@/components/perfilComponent.vue'
 import carritoComponent from '@/components/carritoComponent.vue'
 import adminComponent from '@/components/adminComponent.vue'
 import tiendaComponent from '@/components/tiendaComponent.vue'
+import legalidadComponent from '@/components/legalidad.vue'
+import terminosYCondicionesComponent from '@/components/terminosYCondicionesComponent.vue'
+import politicaPrivacidadComponent from '@/components/politicaPrivacidadComponent.vue'
+import politicaCookiesComponent from '@/components/politicaCookiesComponent.vue'
 
 const routes = [
   {
@@ -73,6 +77,29 @@ const routes = [
   {
     path: '/mensaje',
     component: () => import('../components/conexionSB.vue')
+  },
+  {
+    path: '/legalidad',
+    name: 'Legalidad',
+    component: legalidadComponent,
+    redirect: { name: 'Privacidad' },
+    children: [
+      {
+        path: 'terminos',
+        name: 'Terminos',
+        component: terminosYCondicionesComponent
+      },
+      {
+        path: 'privacidad',
+        name: 'Privacidad',
+        component: politicaPrivacidadComponent
+      },
+      {
+        path: 'cookies',
+        name: 'Cookies',
+        component: politicaCookiesComponent
+      }
+    ]
   }
 ]
 

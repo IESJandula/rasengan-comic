@@ -1,9 +1,27 @@
 <template>
   <div class="products-container">
+    <!-- Overlay para móvil -->
+    <div 
+      v-if="showFilters" 
+      class="filter-overlay" 
+      @click="toggleFilters"
+    ></div>
+
+    <!-- Botón de toggle para móvil -->
+    <button class="filter-toggle-btn" @click="toggleFilters" aria-label="Toggle filters">
+      <span v-if="showFilters">✕ Cerrar Filtros</span>
+      <span v-else>☰ Filtros</span>
+    </button>
+
     <div class="products-wrapper">
       <!-- Filtros (Izquierda) -->
-      <aside class="filters-sidebar">
-        <h2 class="filters-title">Filtros</h2>
+      <aside class="filters-sidebar" :class="{ 'filters-open': showFilters }">
+        <div class="filters-header">
+          <h2 class="filters-title">Filtros</h2>
+          <button class="filter-close-btn" @click="toggleFilters" aria-label="Cerrar filtros">
+            ✕
+          </button>
+        </div>
 
         <!-- Ordenar por -->
         <div class="filter-section">
@@ -401,11 +419,22 @@
         </div>
       </main>
     </div>
+
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div v-if="showToast" class="toast-notification">
+        <div class="toast-icon">✅</div>
+        <div class="toast-content">
+          <h4 class="toast-title">¡Producto agregado!</h4>
+          <p class="toast-message">{{ toastMessage }}</p>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api/axios'
 import { useCartStore } from '@/stores/cartStore'
@@ -438,6 +467,20 @@ const products = ref<Product[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const recentlyAddedProducts = ref<Set<number>>(new Set())
+const showFilters = ref(false)
+const showToast = ref(false)
+const toastMessage = ref('')
+
+// Función para toggle de filtros en móvil
+const toggleFilters = () => {
+  showFilters.value = !showFilters.value
+  // Prevenir scroll del body cuando los filtros están abiertos en móvil
+  if (showFilters.value && window.innerWidth <= 768) {
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = ''
+  }
+}
 
 // Función para cargar productos desde la API
 const loadProducts = async () => {
@@ -972,6 +1015,22 @@ onMounted(async () => {
   if (q) {
     searchQuery.value = q
   }
+
+  // Listener para cerrar filtros en móvil al hacer resize
+  window.addEventListener('resize', handleResize)
+})
+
+const handleResize = () => {
+  if (window.innerWidth > 768 && showFilters.value) {
+    showFilters.value = false
+    document.body.style.overflow = ''
+  }
+}
+
+// Cleanup cuando se desmonte el componente
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  document.body.style.overflow = ''
 })
 
 // Observar cambios en la URL
@@ -1083,7 +1142,11 @@ const addToCart = (productId: number) => {
   if (!product) return
   
   if (product.isReserve) {
-    alert(`✅ Reserva realizada para: ${product.name}`)
+    toastMessage.value = `Reserva realizada para: ${product.name}`
+    showToast.value = true
+    setTimeout(() => {
+      showToast.value = false
+    }, 3000)
   } else {
     cartStore.addToCart({
       id: product.id,
@@ -1092,6 +1155,13 @@ const addToCart = (productId: number) => {
       price: product.price,
       image: product.image
     })
+    
+    // Mostrar notificación toast
+    toastMessage.value = `${product.name}`
+    showToast.value = true
+    setTimeout(() => {
+      showToast.value = false
+    }, 3000)
     
     // Agregar producto a la lista de recientemente agregados
     recentlyAddedProducts.value.add(productId)
@@ -1147,6 +1217,66 @@ const viewProduct = (productId: number) => {
 .filters-sidebar::-webkit-scrollbar-thumb {
   background: #dc2626;
   border-radius: 10px;
+}
+
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.filter-close-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.filter-close-btn:hover {
+  background-color: #f3f4f6;
+  color: #000;
+}
+
+.filter-toggle-btn {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 14px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+  z-index: 999;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.filter-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.5);
+}
+
+.filter-toggle-btn:active {
+  transform: translateY(0);
+}
+
+.filter-overlay {
+  display: none;
 }
 
 .filters-title {
@@ -1605,12 +1735,64 @@ const viewProduct = (productId: number) => {
     gap: 20px;
   }
 
+  .filter-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .filter-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .filters-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 85%;
+    max-width: 320px;
+    height: 100vh;
+    max-height: 100vh;
+    z-index: 1000;
     padding: 15px;
+    border-radius: 0;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.2);
+    transition: left 0.3s ease-in-out;
+    overflow-y: auto;
+  }
+
+  .filters-sidebar.filters-open {
+    left: 0;
+  }
+
+  .filter-close-btn {
+    display: flex;
+  }
+
+  .filters-header {
+    margin-bottom: 20px;
   }
 
   .filters-title {
     font-size: 20px;
+    margin: 0;
   }
 
   .filter-subtitle {
@@ -1648,8 +1830,20 @@ const viewProduct = (productId: number) => {
     padding: 10px 5px;
   }
 
+  .filter-toggle-btn {
+    padding: 12px 20px;
+    font-size: 14px;
+    bottom: 15px;
+    right: 15px;
+  }
+
   .filters-sidebar {
+    width: 90%;
     padding: 12px;
+  }
+
+  .filters-sidebar.filters-open {
+    width: 90%;
   }
 
   .filter-subtitle {
@@ -1691,6 +1885,88 @@ const viewProduct = (productId: number) => {
   .clear-filters-btn {
     padding: 10px;
     font-size: 14px;
+  }
+}
+
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  top: 100px;
+  right: 30px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 20px 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 9999;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.toast-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
+.toast-message {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.4;
+}
+
+/* Transiciones del toast */
+.toast-enter-active {
+  animation: toast-in 0.3s ease-out;
+}
+
+.toast-leave-active {
+  animation: toast-out 0.3s ease-in;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
+@media (max-width: 768px) {
+  .toast-notification {
+    top: 80px;
+    right: 15px;
+    left: 15px;
+    min-width: auto;
+    max-width: none;
   }
 }
 </style>
