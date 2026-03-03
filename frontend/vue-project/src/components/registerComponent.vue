@@ -11,9 +11,6 @@
 
       <!-- Formulario de Registro -->
       <div class="register-form-container">
-        <router-link to="/" class="auth-home-link" aria-label="Ir a inicio">
-          <img src="@/assets/img_cabecera.png" alt="Rasengan Comics" class="auth-logo" />
-        </router-link>
         <h1 class="register-title">Registrate:</h1>
 
         <form @submit.prevent="handleRegister" class="register-form">
@@ -265,7 +262,7 @@ const goToLogin = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: clamp(12px, 3vw, 24px);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -275,36 +272,30 @@ const goToLogin = () => {
   max-width: 1000px;
   background-color: white;
   border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   overflow: hidden;
 }
 
 .register-form-container {
   flex: 1;
-  padding: 60px 40px;
+  padding: clamp(28px, 5vw, 60px) clamp(24px, 4vw, 40px);
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfcff 100%);
 }
 
 .register-title {
   font-size: 32px;
-  font-weight: bold;
+  font-weight: 700;
   color: #1f2937;
-  margin-bottom: 10px;
-}
-
-.auth-home-link {
-  display: flex;
-  justify-content: center;
+  margin-bottom: 18px;
+  text-align: center;
   width: 100%;
-  margin-bottom: 14px;
-}
-
-.auth-logo {
-  height: 10em;
-  width: auto;
-  object-fit: contain;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .register-subtitle {
@@ -316,13 +307,16 @@ const goToLogin = () => {
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .form-label {
@@ -332,12 +326,17 @@ const goToLogin = () => {
 }
 
 .form-input {
-  padding: 10px 12px;
+  padding: 12px 16px;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
-  font-size: 14px;
-  transition: all 0.3s ease;
+  font-size: 16px;
+  transition: all 0.25s ease;
   font-family: inherit;
+  background-color: #ffffff;
+}
+
+.form-input:hover {
+  border-color: #d1d5db;
 }
 
 .form-input:focus {
@@ -354,17 +353,23 @@ const goToLogin = () => {
 
 .password-input-container .form-input {
   width: 100%;
-  padding-right: 40px;
+  padding-right: 45px;
 }
 
 .password-toggle {
   position: absolute;
-  right: 12px;
+  right: 15px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
   padding: 5px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.password-toggle:hover {
+  background-color: #f3f4f6;
 }
 
 .field-error {
@@ -404,8 +409,7 @@ const goToLogin = () => {
   color: #6b7280;
 }
 
-.terms-checkbox,
-.newsletter-checkbox {
+.terms-checkbox {
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -415,8 +419,7 @@ const goToLogin = () => {
   line-height: 1.5;
 }
 
-.terms-checkbox input,
-.newsletter-checkbox input {
+.terms-checkbox input {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -461,9 +464,11 @@ const goToLogin = () => {
   border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: 0.2px;
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 10px;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.2);
 }
 
 .register-button:hover:not(:disabled) {
@@ -478,9 +483,11 @@ const goToLogin = () => {
 
 .register-links {
   text-align: center;
-  margin-top: 15px;
+  margin: 24px auto 0;
   font-size: 14px;
   color: #6b7280;
+  width: 100%;
+  max-width: 420px;
 }
 
 .link {
