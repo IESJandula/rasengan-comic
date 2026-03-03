@@ -35,7 +35,7 @@
           </li>
           <li>
             <span class="icon">📍</span>
-            <span class="footer-text-inline">Calle Margarita Córcoles<br>Andújar, Jaén, España</span>
+            <a href="https://maps.google.com/?q=Calle+Margarita+Córcoles,+Andújar,+Jaén" target="_blank" rel="noopener noreferrer" class="footer-link">Calle Margarita Córcoles<br>Andújar, Jaén, España</a>
           </li>
         </ul>
       </div>
