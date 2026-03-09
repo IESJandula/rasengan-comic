@@ -98,6 +98,7 @@ public class PedidoService {
     @Transactional
     public Pedido crearPedidoPagado(String usuarioUid,
                                     List<com.rasengaComics.rasengaComics.dto.request.PedidoRequest.Item> items,
+                                    String metodoEntrega,
                                     String stripeSessionId,
                                     String stripePaymentIntentId) {
         logger.info("【CREAR PEDIDO PAGADO】 usuarioUid: {}, items: {}, sessionId: {}", usuarioUid, items.size(), stripeSessionId);
@@ -121,6 +122,7 @@ public class PedidoService {
         pedido.setUsuario(usuario);
         pedido.setFechaPedido(LocalDateTime.now());
         pedido.setEstado("PAGADO");
+        pedido.setMetodoEntrega(normalizarMetodoEntrega(metodoEntrega));
         pedido.setStripeSessionId(stripeSessionId);
         pedido.setStripePaymentIntentId(stripePaymentIntentId);
 
@@ -211,6 +213,17 @@ public class PedidoService {
             return pedidoRepository.save(pedido);
         }
         return null;
+    }
+
+    private String normalizarMetodoEntrega(String metodoEntrega) {
+        if (metodoEntrega == null) {
+            return "envio";
+        }
+        String normalizado = metodoEntrega.trim().toLowerCase();
+        if ("tienda".equals(normalizado)) {
+            return "tienda";
+        }
+        return "envio";
     }
 }
 

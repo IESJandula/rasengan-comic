@@ -57,6 +57,7 @@ public class StripeService {
         asegurarUsuario(request);
 
         List<SessionCreateParams.LineItem> lineItems = new ArrayList<>();
+        String metodoEntrega = normalizarMetodoEntrega(request.getMetodoEntrega());
         String itemsMetadata = request.getItems().stream()
             .map(i -> i.getProductoId() + ":" + i.getCantidad())
             .collect(Collectors.joining(","));
@@ -104,6 +105,7 @@ public class StripeService {
                 .setCancelUrl(cancelUrl)
             .setClientReferenceId(request.getUsuarioUid())
                 .putMetadata("usuarioUid", request.getUsuarioUid())
+            .putMetadata("metodoEntrega", metodoEntrega)
             .putMetadata("items", itemsMetadata)
                 .addAllLineItem(lineItems)
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
@@ -122,8 +124,10 @@ public class StripeService {
         }
 
         String usuarioUid = null;
+        String metodoEntrega = "envio";
         if (session.getMetadata() != null) {
             usuarioUid = session.getMetadata().get("usuarioUid");
+            metodoEntrega = normalizarMetodoEntrega(session.getMetadata().get("metodoEntrega"));
         }
         if (usuarioUid == null || usuarioUid.isBlank()) {
             usuarioUid = session.getClientReferenceId();
@@ -208,6 +212,7 @@ public class StripeService {
                 pedidoService.crearPedidoPagado(
                         usuarioUid,
                         items,
+                    metodoEntrega,
                         session.getId(),
                         session.getPaymentIntent()
                 );
@@ -251,5 +256,16 @@ public class StripeService {
         nuevo.setNombre(request.getUsuarioNombre());
         nuevo.setRol("USER");
         usuarioRepository.save(nuevo);
+    }
+
+    private String normalizarMetodoEntrega(String metodoEntrega) {
+        if (metodoEntrega == null) {
+            return "envio";
+        }
+        String normalizado = metodoEntrega.trim().toLowerCase();
+        if ("tienda".equals(normalizado)) {
+            return "tienda";
+        }
+        return "envio";
     }
 }

@@ -204,9 +204,9 @@
           <div v-for="product in products" :key="product.id" class="item-card">
             <div class="item-details">
               <h3>{{ product.name }}</h3>
-              <p>💰 ${{ product.price }}</p>
+              <p> ${{ product.price }}</p>
               <p :class="['stock-indicator', product.stock === 0 ? 'out-of-stock' : product.stock < 10 ? 'low-stock' : 'in-stock']">
-                📦 Stock: {{ product.stock }}
+                 Stock: {{ product.stock }}
               </p>
             </div>
             <div class="item-actions">
@@ -459,6 +459,189 @@
         </div>
       </div>
 
+      <!-- Envios -->
+      <div v-if="activeTab === 'Envios'" class="admin-section">
+        <h1>Gestion de Envios</h1>
+
+        <div class="shipments-summary">
+          <div class="shipment-kpi">
+            <span class="kpi-label">Pendientes de gestion</span>
+            <strong class="kpi-value">{{ enviosPendientesCount }}</strong>
+          </div>
+          <div class="shipment-kpi">
+            <span class="kpi-label">A domicilio pendientes</span>
+            <strong class="kpi-value">{{ enviosDomicilioPendientesCount }}</strong>
+          </div>
+          <div class="shipment-kpi">
+            <span class="kpi-label">Recogida en tienda pendientes</span>
+            <strong class="kpi-value">{{ recogidasTiendaPendientesCount }}</strong>
+          </div>
+          <div class="shipment-kpi">
+            <span class="kpi-label">Pedidos listados</span>
+            <strong class="kpi-value">{{ enviosAdmin.length }}</strong>
+          </div>
+        </div>
+
+        <div v-if="enviosAdmin.length === 0" class="empty-reservas">
+          <p>No hay pedidos pendientes de gestion en envios.</p>
+        </div>
+
+        <div v-else class="shipments-list">
+          <section class="shipment-group">
+            <h2>Envio a domicilio</h2>
+            <div v-if="enviosDomicilioAdmin.length === 0" class="empty-reservas">
+              <p>No hay pedidos pendientes para envio a domicilio.</p>
+            </div>
+            <article v-for="envio in enviosDomicilioAdmin" :key="`dom-${envio.id}`" class="shipment-card">
+              <header class="shipment-header">
+                <div>
+                  <h3>Pedido #{{ envio.id }}</h3>
+                  <p class="shipment-date">{{ formatDate(envio.fechaPedido) }}</p>
+                </div>
+                <span :class="['status-badge', envio.estadoBadge]">{{ envio.estado }}</span>
+              </header>
+
+              <div class="shipment-grid">
+                <div>
+                  <h4>Destinatario</h4>
+                  <p>{{ envio.destinatario }}</p>
+                  <p>{{ envio.email }}</p>
+                  <p>{{ envio.telefono }}</p>
+                </div>
+
+                <div>
+                  <h4>Direccion de envio</h4>
+                  <p>{{ envio.direccion.calle }}</p>
+                  <p>{{ envio.direccion.codigoPostal }} {{ envio.direccion.ciudad }}</p>
+                  <p>{{ envio.direccion.pais }}</p>
+                </div>
+
+                <div>
+                  <h4>Productos a enviar</h4>
+                  <ul class="shipment-products">
+                    <li v-for="producto in envio.productos" :key="`${envio.id}-${producto.nombre}`">
+                      {{ producto.cantidad }} x {{ producto.nombre }}
+                    </li>
+                  </ul>
+                  <p class="shipment-total">Total: {{ formatPrice(envio.total) }}</p>
+                </div>
+              </div>
+
+              <footer class="shipment-actions">
+                <button
+                  v-if="!['ENVIADO', 'ENTREGADO', 'RECOGIDO', 'COMPLETADO'].includes(envio.estado.toUpperCase())"
+                  @click="marcarPedidoEnviado(envio.id)"
+                  class="btn-primary"
+                >
+                  Marcar como enviado
+                </button>
+              </footer>
+            </article>
+          </section>
+
+          <section class="shipment-group">
+            <h2>Recogida en tienda</h2>
+            <div v-if="recogidasTiendaAdmin.length === 0" class="empty-reservas">
+              <p>No hay pedidos pendientes para recogida en tienda.</p>
+            </div>
+            <article v-for="envio in recogidasTiendaAdmin" :key="`store-${envio.id}`" class="shipment-card">
+              <header class="shipment-header">
+                <div>
+                  <h3>Pedido #{{ envio.id }}</h3>
+                  <p class="shipment-date">{{ formatDate(envio.fechaPedido) }}</p>
+                </div>
+                <span :class="['status-badge', envio.estadoBadge]">{{ envio.estado }}</span>
+              </header>
+
+              <div class="shipment-grid">
+                <div>
+                  <h4>Cliente</h4>
+                  <p>{{ envio.destinatario }}</p>
+                  <p>{{ envio.email }}</p>
+                  <p>{{ envio.telefono }}</p>
+                </div>
+
+                <div>
+                  <h4>Punto de recogida</h4>
+                  <p>Calle Ejemplo 123, Madrid</p>
+                  <p>Lun-Vie: 10:00-20:00</p>
+                  <p>Sab: 10:00-14:00</p>
+                </div>
+
+                <div>
+                  <h4>Productos para recoger</h4>
+                  <ul class="shipment-products">
+                    <li v-for="producto in envio.productos" :key="`${envio.id}-${producto.nombre}`">
+                      {{ producto.cantidad }} x {{ producto.nombre }}
+                    </li>
+                  </ul>
+                  <p class="shipment-total">Total: {{ formatPrice(envio.total) }}</p>
+                </div>
+              </div>
+
+              <footer class="shipment-actions">
+                <button
+                  v-if="!['DISPONIBLE', 'ENTREGADO', 'RECOGIDO', 'COMPLETADO'].includes(envio.estado.toUpperCase())"
+                  @click="marcarPedidoDisponible(envio.id)"
+                  class="btn-primary"
+                >
+                  Marcar como listo para recoger
+                </button>
+              </footer>
+            </article>
+          </section>
+        </div>
+      </div>
+
+      <!-- Carrusel Home -->
+      <div v-if="activeTab === 'Carrusel Home'" class="admin-section">
+        <h1>Gestion del Carrusel Home</h1>
+        <p class="carousel-admin-subtitle">
+          Sube o cambia las imagenes del carrusel principal de la home. Estos cambios se guardan para este navegador.
+        </p>
+
+        <div class="carousel-admin-grid">
+          <article v-for="(slide, index) in carouselSlides" :key="`carousel-slide-${index}`" class="carousel-admin-card">
+            <h3>Slide {{ index + 1 }}</h3>
+
+            <div class="carousel-admin-preview-wrap">
+              <img
+                v-if="slide"
+                :src="slide"
+                :alt="`Slide ${index + 1}`"
+                class="carousel-admin-preview"
+              />
+              <div v-else class="carousel-admin-empty">Sin imagen configurada</div>
+            </div>
+
+            <div class="carousel-admin-actions">
+              <input
+                type="file"
+                accept="image/*"
+                @change="handleCarouselImageUpload($event, index)"
+                :disabled="carouselUploadingIndex === index"
+              />
+              <button
+                type="button"
+                class="btn-cancel"
+                @click="clearCarouselSlide(index)"
+                :disabled="carouselUploadingIndex === index"
+              >
+                Limpiar slide
+              </button>
+            </div>
+
+            <p v-if="carouselUploadingIndex === index" class="uploading-text">Subiendo imagen...</p>
+          </article>
+        </div>
+
+        <div class="carousel-admin-footer">
+          <button class="save-btn" @click="saveCarouselConfig" :disabled="carouselUploadingIndex !== null">
+            Guardar carrusel
+          </button>
+        </div>
+      </div>
+
       <!-- Reportes -->
       <div v-if="activeTab === 'Reportes'" class="admin-section">
         <h1>📊 Generador de Reportes</h1>
@@ -600,6 +783,28 @@ interface ReservaAdmin {
   notas?: string
 }
 
+interface EnvioAdmin {
+  id: number
+  tipoEntrega: 'domicilio' | 'tienda'
+  estado: string
+  estadoBadge: 'pendiente' | 'disponible' | 'recogido' | 'cancelada'
+  fechaPedido: string
+  destinatario: string
+  email: string
+  telefono: string
+  direccion: {
+    calle: string
+    ciudad: string
+    codigoPostal: string
+    pais: string
+  }
+  productos: Array<{
+    nombre: string
+    cantidad: number
+  }>
+  total: number
+}
+
 const authStore = useAuthStore()
 const router = useRouter()
 
@@ -614,7 +819,7 @@ if (!isAdmin.value) {
 }
 
 const activeTab = ref('Estadísticas')
-const tabs = ['Reservas', 'Productos', 'Eventos', 'Descuentos', 'Reportes']
+const tabs = ['Reservas', 'Envios', 'Carrusel Home', 'Productos', 'Eventos', 'Descuentos', 'Reportes']
 
 // Reservas Admin
 const activeReservaFilter = ref('todas')
@@ -637,6 +842,40 @@ const filteredReservasAdmin = computed(() => {
 
 const reservasActivas = computed(() => {
   return reservasAdmin.value.filter(r => r.estado === 'pendiente' || r.estado === 'disponible').length
+})
+
+const enviosAdmin = ref<EnvioAdmin[]>([])
+const carouselSlides = ref<string[]>(['', '', ''])
+const carouselUploadingIndex = ref<number | null>(null)
+const estadosFinalizadosEnvio = ['CANCELADO', 'ENTREGADO', 'RECOGIDO', 'COMPLETADO']
+
+const enviosDomicilioAdmin = computed(() => {
+  return enviosAdmin.value.filter((envio) => envio.tipoEntrega === 'domicilio')
+})
+
+const recogidasTiendaAdmin = computed(() => {
+  return enviosAdmin.value.filter((envio) => envio.tipoEntrega === 'tienda')
+})
+
+const enviosPendientesCount = computed(() => {
+  return enviosAdmin.value.filter((envio) => {
+    const estado = envio.estado.toUpperCase()
+    return !estadosFinalizadosEnvio.includes(estado)
+  }).length
+})
+
+const enviosDomicilioPendientesCount = computed(() => {
+  return enviosDomicilioAdmin.value.filter((envio) => {
+    const estado = envio.estado.toUpperCase()
+    return !estadosFinalizadosEnvio.includes(estado)
+  }).length
+})
+
+const recogidasTiendaPendientesCount = computed(() => {
+  return recogidasTiendaAdmin.value.filter((envio) => {
+    const estado = envio.estado.toUpperCase()
+    return !estadosFinalizadosEnvio.includes(estado)
+  }).length
 })
 
 // Estadísticas desde la base de datos
@@ -757,12 +996,156 @@ const loadReservas = async () => {
   }
 }
 
+const loadEnvios = async (): Promise<void> => {
+  try {
+    const response = await api.get('/pedidos')
+    const pedidos = Array.isArray(response.data) ? response.data : []
+
+    enviosAdmin.value = pedidos
+      .filter((pedido: any) => {
+        const tieneItems = Array.isArray(pedido?.items) && pedido.items.length > 0
+        const estado = (pedido?.estado || '').toUpperCase()
+        const esFinalizado = estadosFinalizadosEnvio.includes(estado)
+        return tieneItems && !esFinalizado
+      })
+      .map((pedido: any) => {
+        const estadoUpper = String(pedido?.estado || 'PENDIENTE').toUpperCase()
+        const metodoEntregaRaw = String(pedido?.metodoEntrega || '').trim().toLowerCase()
+        const tieneDireccion = Boolean(
+          pedido?.usuarioCalle && pedido?.usuarioCiudad && pedido?.usuarioCodigoPostal && pedido?.usuarioPais
+        )
+        const tipoEntrega: EnvioAdmin['tipoEntrega'] = metodoEntregaRaw === 'tienda'
+          ? 'tienda'
+          : metodoEntregaRaw === 'envio'
+            ? 'domicilio'
+            : (tieneDireccion ? 'domicilio' : 'tienda')
+
+        let estadoBadge: EnvioAdmin['estadoBadge'] = 'pendiente'
+        if (['ENVIADO', 'DISPONIBLE'].includes(estadoUpper)) {
+          estadoBadge = 'disponible'
+        } else if (['ENTREGADO', 'RECOGIDO', 'COMPLETADO'].includes(estadoUpper)) {
+          estadoBadge = 'recogido'
+        } else if (estadoUpper === 'CANCELADO') {
+          estadoBadge = 'cancelada'
+        }
+
+        return {
+          id: pedido.id,
+          tipoEntrega,
+          estado: pedido.estado || 'PENDIENTE',
+          estadoBadge,
+          fechaPedido: pedido.fechaPedido,
+          destinatario: pedido.usuarioNombre || pedido.usuarioUid || 'Cliente',
+          email: pedido.usuarioEmail || 'Sin email',
+          telefono: pedido.usuarioTelefono || 'No informado',
+          direccion: {
+            calle: pedido.usuarioCalle || 'No aplica (recogida en tienda)',
+            ciudad: pedido.usuarioCiudad || '-',
+            codigoPostal: pedido.usuarioCodigoPostal || '-',
+            pais: pedido.usuarioPais || '-',
+          },
+          productos: (pedido.items || []).map((item: any) => ({
+            nombre: item?.nombre || 'Producto',
+            cantidad: item?.cantidad || 1,
+          })),
+          total: Number(pedido.total || 0),
+        } as EnvioAdmin
+      })
+  } catch (error) {
+    console.error('Error al cargar envios:', error)
+    enviosAdmin.value = []
+  }
+}
+
 onMounted(() => {
   loadProductos()
   loadEventos()
   loadReservas()
+  loadEnvios()
   loadDescuentos()
+  void loadCarouselConfig()
 })
+
+const loadCarouselConfig = async (): Promise<void> => {
+  const defaults = ['', '', '']
+  try {
+    const response = await api.get('/api/home-carousel')
+    const apiSlides = response.data?.slides
+    if (!Array.isArray(apiSlides)) {
+      carouselSlides.value = defaults
+      return
+    }
+    carouselSlides.value = defaults.map((_, idx) => {
+      const value = apiSlides[idx]
+      return typeof value === 'string' ? value : ''
+    })
+  } catch (error) {
+    console.error('Error al cargar la configuracion del carrusel:', error)
+    carouselSlides.value = defaults
+  }
+}
+
+const saveCarouselConfig = async (): Promise<void> => {
+  try {
+    const payload = { slides: carouselSlides.value }
+    const response = await api.put('/api/home-carousel', payload)
+    const apiSlides = response.data?.slides
+    if (Array.isArray(apiSlides)) {
+      carouselSlides.value = ['', '', ''].map((_, idx) => {
+        const value = apiSlides[idx]
+        return typeof value === 'string' ? value : ''
+      })
+    }
+    alert('Carrusel de home actualizado correctamente')
+  } catch (error) {
+    console.error('Error al guardar configuracion del carrusel:', error)
+    alert('No se pudo guardar la configuracion del carrusel')
+  }
+}
+
+const clearCarouselSlide = (index: number): void => {
+  carouselSlides.value[index] = ''
+}
+
+const handleCarouselImageUpload = async (event: any, index: number): Promise<void> => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('Por favor selecciona un archivo de imagen valido')
+    input.value = ''
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('La imagen debe tener un tamaño maximo de 5MB')
+    input.value = ''
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+  carouselUploadingIndex.value = index
+
+  try {
+    const response = await api.post('/api/upload/image', formData)
+    if (!response.data?.url) {
+      throw new Error('No se recibio URL de imagen')
+    }
+    carouselSlides.value[index] = response.data.url
+  } catch (error: any) {
+    console.error('Error al subir imagen del carrusel:', error)
+    const errorMsg = error.response?.data?.message || error.message || 'Error desconocido'
+    alert(`No se pudo subir la imagen: ${errorMsg}`)
+  } finally {
+    carouselUploadingIndex.value = null
+    input.value = ''
+  }
+}
 
 const getReservaCountByStatus = (status: string): number => {
   if (status === 'todas') return reservasAdmin.value.length
@@ -864,6 +1247,40 @@ const cancelarReservaAdmin = async (reserva: ReservaAdmin): Promise<void> => {
   } catch (error) {
     console.error('❌ Error al cancelar reserva:', error)
     alert('Error al cancelar. Por favor, intenta de nuevo.')
+  }
+}
+
+const marcarPedidoEnviado = async (pedidoId: number): Promise<void> => {
+  if (!confirm(`Marcar pedido #${pedidoId} como enviado?`)) {
+    return
+  }
+
+  try {
+    await api.put(`/pedidos/${pedidoId}/estado`, {
+      estado: 'ENVIADO',
+    })
+    await loadEnvios()
+    alert(`Pedido #${pedidoId} marcado como enviado`)
+  } catch (error) {
+    console.error('Error al actualizar estado del envio:', error)
+    alert('No se pudo actualizar el estado del envio')
+  }
+}
+
+const marcarPedidoDisponible = async (pedidoId: number): Promise<void> => {
+  if (!confirm(`Marcar pedido #${pedidoId} como listo para recoger?`)) {
+    return
+  }
+
+  try {
+    await api.put(`/pedidos/${pedidoId}/estado`, {
+      estado: 'DISPONIBLE',
+    })
+    await loadEnvios()
+    alert(`Pedido #${pedidoId} marcado como disponible para recogida`)
+  } catch (error) {
+    console.error('Error al actualizar estado de recogida:', error)
+    alert('No se pudo actualizar el estado de recogida')
   }
 }
 
@@ -1704,6 +2121,64 @@ const exportProductsToExcel = async () => {
   font-size: 16px;
 }
 
+.carousel-admin-subtitle {
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.carousel-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.carousel-admin-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.carousel-admin-card h3 {
+  margin-bottom: 10px;
+  color: #1f2937;
+}
+
+.carousel-admin-preview-wrap {
+  height: 160px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.carousel-admin-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.carousel-admin-empty {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.carousel-admin-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.carousel-admin-footer {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* Estilos existentes */
 .add-btn {
   padding: 12px 24px;
@@ -2220,6 +2695,14 @@ const exportProductsToExcel = async () => {
   .reserva-admin-actions button {
     width: 100%;
   }
+
+  .carousel-admin-footer {
+    justify-content: stretch;
+  }
+
+  .carousel-admin-footer .save-btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
@@ -2686,6 +3169,105 @@ const exportProductsToExcel = async () => {
 }
 
 /* Reportes */
+.shipments-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.shipment-kpi {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #dc2626;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.kpi-label {
+  display: block;
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  color: #111827;
+  font-size: 26px;
+}
+
+.shipments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.shipment-group h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  color: #111827;
+}
+
+.shipment-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.shipment-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.shipment-header h3 {
+  margin: 0;
+}
+
+.shipment-date {
+  color: #6b7280;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.shipment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.shipment-grid h4 {
+  margin-bottom: 8px;
+  color: #111827;
+}
+
+.shipment-grid p {
+  margin: 3px 0;
+  color: #374151;
+}
+
+.shipment-products {
+  padding-left: 18px;
+  margin: 0 0 8px 0;
+}
+
+.shipment-products li {
+  margin: 4px 0;
+}
+
+.shipment-total {
+  font-weight: 700;
+}
+
+.shipment-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
 .reports-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));

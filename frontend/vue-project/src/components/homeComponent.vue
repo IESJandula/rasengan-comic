@@ -335,11 +335,50 @@ const resolveImageUrl = (image?: string): string => {
 const currentSlide = ref(0);
 
 // Imágenes del carrusel
-const slides = [
+const defaultSlides = [
   banner1,
   banner2,
   banner3,
-];
+]
+const slides = ref<string[]>([...defaultSlides])
+
+const resolveCarouselSlideUrl = (image?: string): string => {
+  if (!image) {
+    return ''
+  }
+
+  if (
+    image.startsWith('http://') ||
+    image.startsWith('https://') ||
+    image.startsWith('data:') ||
+    image.startsWith('blob:') ||
+    image.startsWith('/')
+  ) {
+    return image
+  }
+
+  return new URL(`../assets/delete_inicio/${image}`, import.meta.url).href
+}
+
+const loadCarouselSlides = async (): Promise<void> => {
+  try {
+    const response = await api.get('/api/home-carousel')
+    const apiSlides = response.data?.slides
+    if (!Array.isArray(apiSlides)) {
+      slides.value = [...defaultSlides]
+      return
+    }
+
+    const normalized = apiSlides
+      .map((item) => resolveCarouselSlideUrl(typeof item === 'string' ? item : ''))
+      .filter((item): item is string => Boolean(item))
+
+    slides.value = normalized.length > 0 ? normalized : [...defaultSlides]
+  } catch (error) {
+    console.error('Error al cargar el carrusel configurado:', error)
+    slides.value = [...defaultSlides]
+  }
+}
 
 // Productos más comprados (cargados desde API)
 const productosMasComprados = ref<any[]>([])
@@ -615,11 +654,11 @@ const ultimosAccesorios = ref<any[]>([
 let timer: ReturnType<typeof setInterval> | null = null;
 
 const prevSlide = () => {
-  currentSlide.value = (currentSlide.value - 1 + slides.length) % slides.length;
+  currentSlide.value = (currentSlide.value - 1 + slides.value.length) % slides.value.length;
 };
 
 const nextSlide = () => {
-  currentSlide.value = (currentSlide.value + 1) % slides.length;
+  currentSlide.value = (currentSlide.value + 1) % slides.value.length;
 };
 
 const startAutoSlide = () => {
@@ -794,6 +833,7 @@ const goToLogin = () => {
 }
 
 onMounted(() => {
+  void loadCarouselSlides()
   startAutoSlide()
   loadProductosMasComprados()
   loadEventosDisponibles()

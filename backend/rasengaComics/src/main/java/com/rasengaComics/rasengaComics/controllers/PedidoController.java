@@ -106,8 +106,13 @@ public class PedidoController {
         r.setUsuarioNombre(p.getUsuario().getNombre());
         r.setUsuarioEmail(p.getUsuario().getEmail());
         r.setUsuarioTelefono(p.getUsuario().getTelefono());
+        r.setUsuarioCalle(p.getUsuario().getCalle());
+        r.setUsuarioCiudad(p.getUsuario().getCiudad());
+        r.setUsuarioCodigoPostal(p.getUsuario().getCodigoPostal());
+        r.setUsuarioPais(p.getUsuario().getPais());
         r.setFechaPedido(p.getFechaPedido());
         r.setEstado(p.getEstado());
+        r.setMetodoEntrega(p.getMetodoEntrega());
         r.setCantidadDetalles(p.getDetalles() != null ? p.getDetalles().size() : 0);
         r.setTotal(calcularTotal(p));
         r.setItems(mapItems(p.getDetalles(), p.getEstado()));

@@ -26,6 +26,7 @@ public class Pedido {
     private LocalDateTime fechaPedido;
     private String estado;
     private Double total;
+    private String metodoEntrega;
     private String stripeSessionId;
     private String stripePaymentIntentId;
 
@@ -73,6 +74,14 @@ public class Pedido {
 
     public void setTotal(Double total) {
         this.total = total;
+    }
+
+    public String getMetodoEntrega() {
+        return metodoEntrega;
+    }
+
+    public void setMetodoEntrega(String metodoEntrega) {
+        this.metodoEntrega = metodoEntrega;
     }
 
     public String getStripeSessionId() {
