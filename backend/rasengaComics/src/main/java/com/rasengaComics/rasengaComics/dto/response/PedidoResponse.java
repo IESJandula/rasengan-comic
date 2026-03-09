@@ -7,6 +7,9 @@ public class PedidoResponse {
 
     private Long id;
     private String usuarioUid;
+    private String usuarioNombre;
+    private String usuarioEmail;
+    private String usuarioTelefono;
     private String estado;
     private Double total;
     private LocalDateTime fechaPedido;
@@ -21,6 +24,15 @@ public class PedidoResponse {
 
     public String getUsuarioUid() { return usuarioUid; }
     public void setUsuarioUid(String usuarioUid) { this.usuarioUid = usuarioUid; }
+
+    public String getUsuarioNombre() { return usuarioNombre; }
+    public void setUsuarioNombre(String usuarioNombre) { this.usuarioNombre = usuarioNombre; }
+
+    public String getUsuarioEmail() { return usuarioEmail; }
+    public void setUsuarioEmail(String usuarioEmail) { this.usuarioEmail = usuarioEmail; }
+
+    public String getUsuarioTelefono() { return usuarioTelefono; }
+    public void setUsuarioTelefono(String usuarioTelefono) { this.usuarioTelefono = usuarioTelefono; }
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
@@ -46,6 +58,9 @@ public class PedidoResponse {
         private Double precio;
         private Integer cantidad;
         private Boolean reserva;
+        private String imagen;
+        private String categoria;
+        private String editorial;
 
         public Item() {}
 
@@ -63,6 +78,15 @@ public class PedidoResponse {
 
         public Boolean getReserva() { return reserva; }
         public void setReserva(Boolean reserva) { this.reserva = reserva; }
+
+        public String getImagen() { return imagen; }
+        public void setImagen(String imagen) { this.imagen = imagen; }
+
+        public String getCategoria() { return categoria; }
+        public void setCategoria(String categoria) { this.categoria = categoria; }
+
+        public String getEditorial() { return editorial; }
+        public void setEditorial(String editorial) { this.editorial = editorial; }
     }
 }
 

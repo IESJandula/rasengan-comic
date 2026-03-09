@@ -97,9 +97,9 @@
             <input v-model="acceptTerms" type="checkbox" required />
             <span>
               Acepto los
-              <a href="#" class="terms-link">términos y condiciones</a>
+              <a href="#" @click.prevent="goToTerms" class="terms-link">términos y condiciones</a>
               y la
-              <a href="#" class="terms-link">política de privacidad</a>
+              <a href="#" @click.prevent="goToPrivacy" class="terms-link">política de privacidad</a>
             </span>
           </label>
 
@@ -246,6 +246,14 @@ const handleRegister = async () => {
 
 const goToLogin = () => {
   router.push('/login')
+}
+
+const goToTerms = () => {
+  router.push('/legalidad/terminos')
+}
+
+const goToPrivacy = () => {
+  router.push('/legalidad/privacidad')
 }
 </script>
 

@@ -359,6 +359,9 @@ const checkout = async () => {
       return
     }
 
+    // Fallback: si el webhook de Stripe falla, confirmar esta sesión al volver del checkout.
+    localStorage.setItem('pendingStripeSessionId', sessionId)
+
     console.log('🔑 SessionId recibido:', sessionId)
     console.log('💳 Cargando Stripe...')
 

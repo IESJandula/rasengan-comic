@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 @RestController
 @RequestMapping("/stripe")
 public class StripeWebhookController {
@@ -38,21 +38,18 @@ public class StripeWebhookController {
 
             if ("checkout.session.completed".equals(event.getType())) {
                 logger.info("【PROCESANDO CHECKOUT COMPLETADO】");
-                
-                try {
-                    // Obtener la sesión del evento usando deserializeUnsafe
-                    Session session = (Session) event.getDataObjectDeserializer().deserializeUnsafe();
-                    logger.info("【SESSION DESERIALIZADA】 Tipo: {}", session.getClass().getSimpleName());
-                    
-                    if (session != null && session.getId() != null) {
-                        logger.info("【SESSION VALIDA】 SessionId: {}", session.getId());
-                        stripeService.procesarCheckoutCompletado(session);
-                        logger.info("【PEDIDO CREADO EXITOSAMENTE】");
-                    } else {
-                        logger.error("【ERROR】 Session o ID es null");
-                    }
-                } catch (Exception e) {
-                    logger.error("【ERROR】 Error procesando sesión: {}", e.getMessage(), e);
+
+                // Obtener la sesión del evento usando deserializeUnsafe
+                Session session = (Session) event.getDataObjectDeserializer().deserializeUnsafe();
+                logger.info("【SESSION DESERIALIZADA】 Tipo: {}", session.getClass().getSimpleName());
+
+                if (session != null && session.getId() != null) {
+                    logger.info("【SESSION VALIDA】 SessionId: {}", session.getId());
+                    stripeService.procesarCheckoutCompletado(session);
+                    logger.info("【PEDIDO CREADO EXITOSAMENTE】");
+                } else {
+                    logger.error("【ERROR】 Session o ID es null");
+                    return ResponseEntity.status(500).body("Invalid session payload");
                 }
             } else {
                 logger.info("【EVENTO IGNORADO】 Type: {}", event.getType());

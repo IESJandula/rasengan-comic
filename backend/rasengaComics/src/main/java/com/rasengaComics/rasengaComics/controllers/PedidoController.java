@@ -17,7 +17,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "http://localhost:5173")
+import com.rasengaComics.rasengaComics.entities.Product;
+
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 @RestController
 @RequestMapping("/pedidos")
 public class PedidoController {
@@ -101,11 +103,14 @@ public class PedidoController {
         PedidoResponse r = new PedidoResponse();
         r.setId(p.getId());
         r.setUsuarioUid(p.getUsuario().getUid());
+        r.setUsuarioNombre(p.getUsuario().getNombre());
+        r.setUsuarioEmail(p.getUsuario().getEmail());
+        r.setUsuarioTelefono(p.getUsuario().getTelefono());
         r.setFechaPedido(p.getFechaPedido());
         r.setEstado(p.getEstado());
         r.setCantidadDetalles(p.getDetalles() != null ? p.getDetalles().size() : 0);
         r.setTotal(calcularTotal(p));
-        r.setItems(mapItems(p.getDetalles()));
+        r.setItems(mapItems(p.getDetalles(), p.getEstado()));
         return r;
     }
 
@@ -121,7 +126,7 @@ public class PedidoController {
                 .sum();
     }
 
-    private List<PedidoResponse.Item> mapItems(List<DetallePedido> detalles) {
+    private List<PedidoResponse.Item> mapItems(List<DetallePedido> detalles, String estadoPedido) {
         if (detalles == null) {
             return List.of();
         }
@@ -131,10 +136,40 @@ public class PedidoController {
             item.setNombre(detalle.getProducto().getNombre());
             item.setPrecio(detalle.getPrecioUnitario());
             item.setCantidad(detalle.getCantidad());
-            boolean isReserva = productRepository.findById(detalle.getProducto().getId())
+
+            Optional<Product> productInfo = productRepository.findById(detalle.getProducto().getId());
+            if (productInfo.isEmpty()) {
+                productInfo = productRepository.findByName(detalle.getProducto().getNombre());
+            }
+            
+            // Fallback por estado: si ya va por flujo de reservas, no perder el item aunque falle lookup.
+            boolean esReservaPorEstado = "PENDIENTE".equalsIgnoreCase(estadoPedido)
+                    || "DISPONIBLE".equalsIgnoreCase(estadoPedido)
+                    || "RECOGIDO".equalsIgnoreCase(estadoPedido)
+                    || "CANCELADO".equalsIgnoreCase(estadoPedido);
+
+            boolean isReserva = productInfo
                     .map(product -> Boolean.TRUE.equals(product.getIsReserve()))
-                    .orElse(false);
+                    .orElse(esReservaPorEstado);
             item.setReserva(isReserva);
+            
+            // Agregar información adicional del producto si está disponible
+            productInfo.ifPresent(product -> {
+                item.setImagen(product.getImage());
+                item.setCategoria(product.getCategory());
+                item.setEditorial("Rasengan Comics");
+            });
+
+            if (item.getImagen() == null || item.getImagen().isBlank()) {
+                item.setImagen("https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=400");
+            }
+            if (item.getCategoria() == null || item.getCategoria().isBlank()) {
+                item.setCategoria("Producto Reserva");
+            }
+            if (item.getEditorial() == null || item.getEditorial().isBlank()) {
+                item.setEditorial("Rasengan Comics");
+            }
+            
             return item;
         }).collect(Collectors.toList());
     }

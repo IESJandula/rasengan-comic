@@ -159,25 +159,21 @@ public class PedidoService {
                 productRepository.save(product);
                 logger.info("【STOCK ACTUALIZADO】 Nuevo stock: {}", product.getStock());
                 
-                // CAMBIO: Usar SOLO la tabla productos manteniendo sincronía
-                // Buscar o crear el producto en tabla productos usando el MISMO ID de products
+                // Buscar o crear el producto en tabla productos usando el MISMO ID de products.
+                // No actualizamos registros existentes aquí para evitar conflictos de concurrencia
+                // durante el procesamiento de webhooks de Stripe.
                 Optional<Producto> optProducto = productoRepository.findById(item.getProductoId());
+                if (optProducto.isEmpty()) {
+                    optProducto = productoRepository.findByNombre(product.getName());
+                }
                 Producto producto;
                 if (optProducto.isPresent()) {
-                    // Actualizar producto existente con datos de products
                     producto = optProducto.get();
-                    logger.info("【PRODUCTO EXISTE EN PRODUCTOS】 ID: {}, Nombre anterior: {}", producto.getId(), producto.getNombre());
-                    // Actualizar con los datos correctos de la tabla products
-                    producto.setNombre(product.getName());
-                    producto.setDescripcion(product.getCategory() + (product.getSubcategory() != null ? " - " + product.getSubcategory() : ""));
-                    producto.setPrecio(product.getPrice());
-                    producto.setStock(product.getStock());
-                    producto = productoRepository.save(producto);
-                    logger.info("【PRODUCTO SINCRONIZADO】 Nombre actualizado a: {}", producto.getNombre());
+                    logger.info("【PRODUCTO EXISTE EN PRODUCTOS】 ID: {}, Nombre: {}", producto.getId(), producto.getNombre());
                 } else {
-                    // Crear producto en tabla productos desde product si no existe
+                    // Crear producto en tabla productos desde products si no existe.
+                    // Dejar que la PK sea autogenerada evita conflictos entre IDs de tablas distintas.
                     producto = new Producto();
-                    producto.setId(product.getId());
                     producto.setNombre(product.getName());
                     producto.setDescripcion(product.getCategory() + (product.getSubcategory() != null ? " - " + product.getSubcategory() : ""));
                     producto.setPrecio(product.getPrice());

@@ -26,8 +26,8 @@
     <!-- Empty State -->
     <div v-else-if="filteredReservas.length === 0" class="empty-state">
       <div class="empty-icon">📭</div>
-      <h2>No tienes reservas {{ activeFilter !== 'todas' ? activeFilter : '' }}</h2>
-      <p>Explora nuestra tienda y reserva tus productos favoritos</p>
+      <h2>{{ getEmptyStateTitle() }}</h2>
+      <p>{{ getEmptyStateMessage() }}</p>
       <router-link to="/tienda" class="btn-primary">Ir a la Tienda</router-link>
     </div>
 
@@ -111,7 +111,7 @@
             👁️ Ver Detalles
           </button>
           <button 
-            v-if="reserva.estado === 'pendiente'" 
+            v-if="reserva.estado === 'pendiente' || reserva.estado === 'disponible'" 
             @click="cancelarReserva(reserva)" 
             class="btn-danger"
           >
@@ -158,6 +158,7 @@ interface Producto {
 
 interface Reserva {
   id: string
+  pedidoId?: number
   producto: Producto
   estado: 'pendiente' | 'disponible' | 'recogido' | 'cancelada' | 'expirada'
   cantidad: number
@@ -184,6 +185,53 @@ const filters = [
 // Datos de reservas
 const reservas = ref<Reserva[]>([])
 
+// Determinar el estado de una reserva basándose en fechas y estado del pedido
+const determinarEstadoReserva = (pedidoEstado: string, fechaDisponibilidad?: string, estadoReserva?: string): 'pendiente' | 'disponible' | 'recogido' | 'cancelada' | 'expirada' => {
+  const estadoPedidoNormalizado = (pedidoEstado || '').toUpperCase()
+
+  // Si tiene un estado específico de reserva, usarlo
+  if (estadoReserva) {
+    return estadoReserva as any
+  }
+  
+  // Si el pedido está cancelado
+  if (estadoPedidoNormalizado === 'CANCELADO') {
+    return 'cancelada'
+  }
+  
+  // Si el pedido está marcado como recogido/completado
+  if (estadoPedidoNormalizado === 'RECOGIDO' || estadoPedidoNormalizado === 'COMPLETADO' || estadoPedidoNormalizado === 'ENTREGADO') {
+    return 'recogido'
+  }
+  
+  // Si tiene fecha de disponibilidad, verificar si ya está disponible
+  if (fechaDisponibilidad) {
+    const ahora = new Date()
+    const fechaDisp = new Date(fechaDisponibilidad)
+    
+    if (fechaDisp <= ahora) {
+      return 'disponible'
+    }
+  }
+  
+  // Por defecto, pendiente (todavía no disponible)
+  return 'pendiente'
+}
+
+const isItemReserva = (item: any, pedidoEstado: string): boolean => {
+  if (item?.reserva === true) {
+    return true
+  }
+
+  const estadoPedidoNormalizado = (pedidoEstado || '').toUpperCase()
+  return (
+    estadoPedidoNormalizado === 'PENDIENTE' ||
+    estadoPedidoNormalizado === 'DISPONIBLE' ||
+    estadoPedidoNormalizado === 'RECOGIDO' ||
+    estadoPedidoNormalizado === 'CANCELADO'
+  )
+}
+
 // Cargar reservas desde la API
 const loadReservas = async () => {
   loading.value = true
@@ -205,29 +253,43 @@ const loadReservas = async () => {
 
     pedidos.forEach((pedido: any) => {
       const fechaPedido = pedido?.fechaPedido || new Date().toISOString()
+      const estadoPedido = pedido?.estado || 'PENDIENTE'
       const items = Array.isArray(pedido?.items) ? pedido.items : []
 
       items
-        .filter((item: any) => item?.reserva)
+        .filter((item: any) => isItemReserva(item, estadoPedido))
         .forEach((item: any) => {
           const cantidad = Number(item?.cantidad || 0)
           const precioUnitario = Number(item?.precio || 0)
           const nombre = item?.nombre || 'Producto en reserva'
+          
+          // Calcular fecha de disponibilidad (30 días después del pedido por defecto)
+          const fechaDisp = item?.fechaDisponibilidad ? new Date(item.fechaDisponibilidad) : new Date(fechaPedido)
+          if (!item?.fechaDisponibilidad) {
+            fechaDisp.setDate(fechaDisp.getDate() + 30)
+          }
+          
+          const estado = determinarEstadoReserva(
+            estadoPedido,
+            fechaDisp.toISOString(),
+            item?.estadoReserva
+          )
 
           reservasDesdePedidos.push({
             id: `${pedido?.id ?? 'pedido'}-${item?.productoId ?? Math.random()}`,
+            pedidoId: pedido?.id,
             producto: {
               nombre,
-              categoria: 'Producto Reserva',
-              editorial: 'Rasengan Comics',
-              imagen: 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=400'
+              categoria: item?.categoria || 'Producto Reserva',
+              editorial: item?.editorial || 'Rasengan Comics',
+              imagen: item?.imagen || 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=400'
             },
-            estado: 'pendiente',
+            estado,
             cantidad,
             precioUnitario,
             total: precioUnitario * cantidad,
             fechaReserva: fechaPedido,
-            fechaDisponibilidad: fechaPedido,
+            fechaDisponibilidad: fechaDisp.toISOString(),
             notas: `Reserva generada desde pedido #${pedido?.id ?? '-'}`,
             tiempoRestante: ''
           })
@@ -353,17 +415,61 @@ const getAvailabilityProgress = (reserva: Reserva): number => {
   return Math.round(progress)
 }
 
+const getEmptyStateTitle = (): string => {
+  const titles: Record<string, string> = {
+    todas: 'No tienes reservas',
+    pendiente: 'No tienes reservas pendientes',
+    disponible: 'No tienes reservas disponibles',
+    recogido: 'No tienes reservas recogidas',
+    cancelada: 'No tienes reservas canceladas'
+  }
+  return titles[activeFilter.value] || 'No tienes reservas'
+}
+
+const getEmptyStateMessage = (): string => {
+  const messages: Record<string, string> = {
+    todas: 'Explora nuestra tienda y reserva tus productos favoritos',
+    pendiente: 'Todas tus reservas están disponibles o ya fueron recogidas',
+    disponible: 'No tienes productos listos para recoger en este momento',
+    recogido: 'Aún no has recogido ninguna reserva',
+    cancelada: 'No has cancelado ninguna reserva'
+  }
+  return messages[activeFilter.value] || 'Explora nuestra tienda y reserva tus productos favoritos'
+}
+
 const verDetalles = (reserva: Reserva): void => {
   console.log('Ver detalles de reserva:', reserva.id)
   // Aquí podrías abrir un modal o navegar a una página de detalles
 }
 
-// recogerProducto and extenderReserva removed (unused)
+const cancelarReserva = async (reserva: Reserva): Promise<void> => {
+  if (!confirm(`¿Estás seguro de que quieres cancelar la reserva de "${reserva.producto.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+    return
+  }
 
-const cancelarReserva = (reserva: Reserva): void => {
-  if (confirm(`¿Estás seguro de que quieres cancelar la reserva de "${reserva.producto.nombre}"?`)) {
+  try {
+    if (!reserva.pedidoId) {
+      console.error('❌ No se puede cancelar: pedidoId no disponible')
+      alert('Error: No se pudo identificar el pedido')
+      return
+    }
+
+    // Llamar al endpoint para actualizar el estado del pedido a CANCELADO
+    await api.put(`/pedidos/${reserva.pedidoId}/estado`, {
+      estado: 'CANCELADO'
+    })
+
+    // Actualizar localmente
     reserva.estado = 'cancelada'
-    console.log('Reserva cancelada:', reserva.id)
+    console.log('✅ Reserva cancelada:', reserva.id)
+    
+    // Recargar las reservas para reflejar el cambio
+    await loadReservas()
+    
+    alert('Reserva cancelada exitosamente')
+  } catch (error) {
+    console.error('❌ Error al cancelar reserva:', error)
+    alert('Error al cancelar la reserva. Por favor, intenta de nuevo.')
   }
 }
 

@@ -95,7 +95,7 @@
                 @click="marcarEntregado(reserva)" 
                 class="btn-primary"
               >
-                📦 Marcar como Entregado
+                📦 Marcar como Recogido
               </button>
               <button 
                 @click="contactarCliente(reserva)" 
@@ -588,6 +588,7 @@ interface ProductoReservado {
 
 interface ReservaAdmin {
   id: string
+  pedidoId: number
   cliente: Cliente
   producto: ProductoReservado
   estado: 'pendiente' | 'disponible' | 'recogido' | 'cancelada'
@@ -679,31 +680,80 @@ const loadEventos = async () => {
 
 const loadReservas = async () => {
   try {
-    const response = await api.get('/reservas')
-    reservasAdmin.value = response.data.map((r: any) => ({
-      id: 'RES' + r.id,
-      cliente: {
-        nombre: r.usuario?.nombre || 'Sin nombre',
-        email: r.usuario?.email || 'sin@email.com',
-        telefono: r.usuario?.telefono || 'N/A',
-        avatar: 'https://ui-avatars.com/api/?name=' + (r.usuario?.nombre || 'Usuario') + '&background=dc2626&color=fff'
-      },
-      producto: {
-        nombre: r.evento?.nombre || 'Sin evento',
-        categoria: r.evento?.tipo || 'Evento',
-        imagen: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=200'
-      },
-      estado: r.estado || 'pendiente',
-      cantidad: r.personas || 1,
-      precioUnitario: 0,
-      total: 0,
-      fechaReserva: r.fechaReserva || new Date().toISOString(),
-      fechaDisponibilidad: r.fechaReserva,
-      notas: 'Reserva de evento'
-    }))
-    console.log('✅ Reservas cargadas:', reservasAdmin.value.length)
+    // Cargar todos los pedidos
+    const response = await api.get('/pedidos')
+    const pedidos = Array.isArray(response.data) ? response.data : []
+    const reservasArray: ReservaAdmin[] = []
+
+    const isItemReserva = (item: any, estadoPedido: string): boolean => {
+      if (item?.reserva === true) {
+        return true
+      }
+
+      const estadoNormalizado = (estadoPedido || '').toUpperCase()
+      return (
+        estadoNormalizado === 'PENDIENTE' ||
+        estadoNormalizado === 'DISPONIBLE' ||
+        estadoNormalizado === 'RECOGIDO' ||
+        estadoNormalizado === 'CANCELADO'
+      )
+    }
+
+    // Procesar cada pedido para extraer items de reserva
+    pedidos.forEach((pedido: any) => {
+      const items = Array.isArray(pedido?.items) ? pedido.items : []
+      const estadoPedido = (pedido?.estado || 'PENDIENTE').toUpperCase()
+
+      items
+        .filter((item: any) => isItemReserva(item, estadoPedido))
+        .forEach((item: any, index: number) => {
+          // Determinar estado de la reserva basado en el estado del pedido
+          let estadoReserva: 'pendiente' | 'disponible' | 'recogido' | 'cancelada' = 'pendiente'
+          if (estadoPedido === 'CANCELADO') {
+            estadoReserva = 'cancelada'
+          } else if (estadoPedido === 'RECOGIDO' || estadoPedido === 'COMPLETADO' || estadoPedido === 'ENTREGADO') {
+            estadoReserva = 'recogido'
+          } else if (estadoPedido === 'DISPONIBLE' || estadoPedido === 'PAGADO') {
+            // Si el pedido está pagado hace más de 30 días, marcar como disponible
+            const fechaPedido = new Date(pedido.fechaPedido)
+            const fechaActual = new Date()
+            const diasTranscurridos = (fechaActual.getTime() - fechaPedido.getTime()) / (1000 * 60 * 60 * 24)
+            estadoReserva = diasTranscurridos >= 30 ? 'disponible' : 'pendiente'
+          }
+
+          const fechaDisp = new Date(pedido.fechaPedido)
+          fechaDisp.setDate(fechaDisp.getDate() + 30)
+
+          reservasArray.push({
+            id: `${pedido.id}-${item?.productoId || index}`,
+            pedidoId: pedido.id,
+            cliente: {
+              nombre: pedido.usuarioNombre || pedido.usuarioUid || 'Cliente',
+              email: pedido.usuarioEmail || pedido.usuarioUid || 'sin@email.com',
+              telefono: pedido.usuarioTelefono || 'No informado',
+              avatar: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(pedido.usuarioNombre || pedido.usuarioUid || 'Cliente') + '&background=dc2626&color=fff'
+            },
+            producto: {
+              nombre: item?.nombre || 'Producto en reserva',
+              categoria: item?.categoria || 'Producto',
+              imagen: item?.imagen || 'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=200'
+            },
+            estado: estadoReserva,
+            cantidad: item?.cantidad || 1,
+            precioUnitario: item?.precio || 0,
+            total: (item?.precio || 0) * (item?.cantidad || 1),
+            fechaReserva: pedido.fechaPedido,
+            fechaDisponibilidad: fechaDisp.toISOString(),
+            notas: `Pedido #${pedido.id}`
+          })
+        })
+    })
+
+    reservasAdmin.value = reservasArray
+    console.log('✅ Reservas de productos cargadas:', reservasAdmin.value.length)
   } catch (err) {
     console.error('❌ Error al cargar reservas:', err)
+    reservasAdmin.value = []
   }
 }
 
@@ -744,18 +794,46 @@ const getStatusLabel = (estado: string): string => {
   return labels[estado] || estado
 }
 
-const marcarDisponible = (reserva: ReservaAdmin): void => {
-  if (confirm(`¿Marcar como disponible la reserva #${reserva.id}?`)) {
+const marcarDisponible = async (reserva: ReservaAdmin): Promise<void> => {
+  if (!confirm(`¿Marcar como disponible la reserva #${reserva.id}?`)) {
+    return
+  }
+
+  try {
+    await api.put(`/pedidos/${reserva.pedidoId}/estado`, {
+      estado: 'DISPONIBLE'
+    })
+
     reserva.estado = 'disponible'
     reserva.fechaDisponibilidad = new Date().toISOString()
     alert(`Reserva marcada como disponible. Se notificará a ${reserva.cliente.nombre}`)
+    
+    // Recargar las reservas
+    await loadReservas()
+  } catch (error) {
+    console.error('❌ Error al marcar como disponible:', error)
+    alert('Error al actualizar el estado. Por favor, intenta de nuevo.')
   }
 }
 
-const marcarEntregado = (reserva: ReservaAdmin): void => {
-  if (confirm(`¿Confirmar entrega de la reserva #${reserva.id} a ${reserva.cliente.nombre}?`)) {
+const marcarEntregado = async (reserva: ReservaAdmin): Promise<void> => {
+  if (!confirm(`¿Confirmar que ${reserva.cliente.nombre} ha recogido la reserva #${reserva.id}?`)) {
+    return
+  }
+
+  try {
+    await api.put(`/pedidos/${reserva.pedidoId}/estado`, {
+      estado: 'RECOGIDO'
+    })
+
     reserva.estado = 'recogido'
-    alert('Reserva marcada como entregada')
+    alert('Reserva marcada como recogida')
+    
+    // Recargar las reservas
+    await loadReservas()
+  } catch (error) {
+    console.error('❌ Error al marcar como recogido:', error)
+    alert('Error al actualizar el estado. Por favor, intenta de nuevo.')
   }
 }
 
@@ -768,10 +846,24 @@ const editarReserva = (reserva: ReservaAdmin): void => {
   alert(`Editar reserva #${reserva.id} (funcionalidad en desarrollo)`)
 }
 
-const cancelarReservaAdmin = (reserva: ReservaAdmin): void => {
-  if (confirm(`¿Cancelar la reserva #${reserva.id}? Se notificará a ${reserva.cliente.nombre}`)) {
+const cancelarReservaAdmin = async (reserva: ReservaAdmin): Promise<void> => {
+  if (!confirm(`¿Cancelar la reserva #${reserva.id}? Se notificará a ${reserva.cliente.nombre}`)) {
+    return
+  }
+
+  try {
+    await api.put(`/pedidos/${reserva.pedidoId}/estado`, {
+      estado: 'CANCELADO'
+    })
+
     reserva.estado = 'cancelada'
     alert('Reserva cancelada')
+    
+    // Recargar las reservas
+    await loadReservas()
+  } catch (error) {
+    console.error('❌ Error al cancelar reserva:', error)
+    alert('Error al cancelar. Por favor, intenta de nuevo.')
   }
 }
 
