@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class StripeService {
@@ -56,6 +57,10 @@ public class StripeService {
         asegurarUsuario(request);
 
         List<SessionCreateParams.LineItem> lineItems = new ArrayList<>();
+        String itemsMetadata = request.getItems().stream()
+            .map(i -> i.getProductoId() + ":" + i.getCantidad())
+            .collect(Collectors.joining(","));
+
         for (StripeCheckoutRequest.Item item : request.getItems()) {
             if (item.getProductoId() == null || item.getCantidad() == null) {
                 throw new IllegalArgumentException("items incompletos");
@@ -97,7 +102,9 @@ public class StripeService {
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(successUrl)
                 .setCancelUrl(cancelUrl)
+            .setClientReferenceId(request.getUsuarioUid())
                 .putMetadata("usuarioUid", request.getUsuarioUid())
+            .putMetadata("items", itemsMetadata)
                 .addAllLineItem(lineItems)
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
                 .build();
@@ -114,7 +121,13 @@ public class StripeService {
             return;
         }
 
-        String usuarioUid = session.getMetadata().get("usuarioUid");
+        String usuarioUid = null;
+        if (session.getMetadata() != null) {
+            usuarioUid = session.getMetadata().get("usuarioUid");
+        }
+        if (usuarioUid == null || usuarioUid.isBlank()) {
+            usuarioUid = session.getClientReferenceId();
+        }
         logger.info("【USUARIO UID】 {}", usuarioUid);
         
         if (usuarioUid == null || usuarioUid.isBlank()) {
@@ -162,6 +175,31 @@ public class StripeService {
             logger.info("【ITEM AGREGADO】 ProductoId: {}, Cantidad: {}", productoId, pedidoItem.getCantidad());
         }
 
+        // Fallback: si Stripe no devuelve metadata de line items, usar metadata de la session
+        if (items.isEmpty() && session.getMetadata() != null) {
+            String serializedItems = session.getMetadata().get("items");
+            if (serializedItems != null && !serializedItems.isBlank()) {
+                logger.info("【FALLBACK ITEMS】 Reconstruyendo items desde metadata de session");
+                String[] pairs = serializedItems.split(",");
+                for (String pair : pairs) {
+                    String[] values = pair.split(":");
+                    if (values.length != 2) {
+                        continue;
+                    }
+                    try {
+                        Long productoId = Long.parseLong(values[0]);
+                        Integer cantidad = Integer.parseInt(values[1]);
+                        PedidoRequest.Item pedidoItem = new PedidoRequest.Item();
+                        pedidoItem.setProductoId(productoId);
+                        pedidoItem.setCantidad(cantidad);
+                        items.add(pedidoItem);
+                    } catch (NumberFormatException ex) {
+                        logger.warn("【FALLBACK ITEMS】 Formato inválido en metadata item: {}", pair);
+                    }
+                }
+            }
+        }
+
         logger.info("【TOTAL ITEMS PROCESADOS】 {}", items.size());
         
         if (!items.isEmpty()) {
@@ -181,6 +219,24 @@ public class StripeService {
         } else {
             logger.warn("【ADVERTENCIA】 No hay items para procesar");
         }
+    }
+
+    public void confirmarSesionCheckout(String sessionId) throws StripeException {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalArgumentException("sessionId es requerido");
+        }
+
+        Session session = Session.retrieve(sessionId);
+        if (session == null) {
+            throw new IllegalArgumentException("Sesión de Stripe no encontrada");
+        }
+
+        String paymentStatus = session.getPaymentStatus();
+        if (!"paid".equalsIgnoreCase(paymentStatus)) {
+            throw new IllegalArgumentException("La sesión aún no está pagada");
+        }
+
+        procesarCheckoutCompletado(session);
     }
 
     private void asegurarUsuario(StripeCheckoutRequest request) {

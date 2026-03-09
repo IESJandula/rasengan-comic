@@ -654,6 +654,24 @@ const totalGastado = computed(() => {
   return compras.value.reduce((sum, pedido) => sum + (pedido.total || 0), 0)
 })
 
+const confirmarSesionStripePendiente = async () => {
+  const sessionIdFromQuery = typeof route.query.session_id === 'string' ? route.query.session_id : ''
+  const sessionIdFromStorage = localStorage.getItem('pendingStripeSessionId') || ''
+  const sessionId = sessionIdFromQuery || sessionIdFromStorage
+
+  if (!sessionId) {
+    return
+  }
+
+  try {
+    await api.post('/stripe/confirm-session', { sessionId })
+  } catch (error) {
+    console.error('Error confirmando sesión Stripe:', error)
+  } finally {
+    localStorage.removeItem('pendingStripeSessionId')
+  }
+}
+
 // Cargar compras
 const loadCompras = async () => {
   if (!authStore.user?.uid) {
@@ -732,6 +750,8 @@ onMounted(async () => {
     cartStore.clearCart()
     activeTab.value = 'Mis compras'
     showSuccessMessage.value = true
+
+    await confirmarSesionStripePendiente()
     
     // Esperar un poco para que el webhook procese el pedido
     setTimeout(async () => {
