@@ -581,11 +581,11 @@
 
               <footer class="shipment-actions">
                 <button
-                  v-if="!['DISPONIBLE', 'ENTREGADO', 'RECOGIDO', 'COMPLETADO'].includes(envio.estado.toUpperCase())"
-                  @click="marcarPedidoDisponible(envio.id)"
+                  v-if="!['CANCELADO', 'ENTREGADO', 'RECOGIDO', 'COMPLETADO'].includes(envio.estado.toUpperCase())"
+                  @click="marcarPedidoRecogido(envio.id)"
                   class="btn-primary"
                 >
-                  Marcar como listo para recoger
+                  Marcar como recogido
                 </button>
               </footer>
             </article>
@@ -1267,17 +1267,17 @@ const marcarPedidoEnviado = async (pedidoId: number): Promise<void> => {
   }
 }
 
-const marcarPedidoDisponible = async (pedidoId: number): Promise<void> => {
-  if (!confirm(`Marcar pedido #${pedidoId} como listo para recoger?`)) {
+const marcarPedidoRecogido = async (pedidoId: number): Promise<void> => {
+  if (!confirm(`Marcar pedido #${pedidoId} como recogido?`)) {
     return
   }
 
   try {
     await api.put(`/pedidos/${pedidoId}/estado`, {
-      estado: 'DISPONIBLE',
+      estado: 'RECOGIDO',
     })
     await loadEnvios()
-    alert(`Pedido #${pedidoId} marcado como disponible para recogida`)
+    alert(`Pedido #${pedidoId} marcado como recogido`)
   } catch (error) {
     console.error('Error al actualizar estado de recogida:', error)
     alert('No se pudo actualizar el estado de recogida')
