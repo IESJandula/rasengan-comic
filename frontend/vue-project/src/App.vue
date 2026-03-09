@@ -2,6 +2,7 @@
   <div>
     <headerComponent />
     <navComponent />
+    <breadcrumbsComponent />
     <router-view />
     <footerComponent />
   </div>
@@ -13,6 +14,7 @@ import { useAuthStore } from '@/stores/authStore'
 import navComponent from './components/navComponent.vue'
 import headerComponent from './components/headerComponent.vue'
 import footerComponent from './components/footerComponent.vue'
+import breadcrumbsComponent from './components/breadcrumbsComponent.vue'
 
 const authStore = useAuthStore()
 
