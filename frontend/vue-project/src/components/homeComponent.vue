@@ -23,12 +23,14 @@
       <button
         @click="prevSlide"
         class="carousel-button carousel-button-left"
+        aria-label="Imagen anterior"
       >
         ◄
       </button>
       <button
         @click="nextSlide"
         class="carousel-button carousel-button-right"
+        aria-label="Siguiente imagen"
       >
         ►
       </button>
@@ -39,6 +41,7 @@
           v-for="(_, index) in slides"
           :key="index"
           @click="currentSlide = index"
+          :aria-label="`Ir al slide ${index + 1}`"
           :class="['indicator', index === currentSlide ? 'active' : '']"
         />
       </div>
@@ -57,6 +60,11 @@
             :key="item.id"
             class="product-card"
             @click="viewProduct(item.id)"
+            @keydown.enter="viewProduct(item.id)"
+            @keydown.space.prevent="viewProduct(item.id)"
+            tabindex="0"
+            role="button"
+            :aria-label="`Ver detalle de ${item.name}`"
             style="cursor: pointer;"
           >
             <img
@@ -91,6 +99,11 @@
               :key="producto.id"
               class="product-card reserva-product-card"
               @click="viewProduct(producto.id)"
+              @keydown.enter="viewProduct(producto.id)"
+              @keydown.space.prevent="viewProduct(producto.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${producto.name}`"
               style="cursor: pointer;"
             >
               <img 
@@ -125,6 +138,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -150,6 +168,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -175,6 +198,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -200,6 +228,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -225,6 +258,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -250,6 +288,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -271,7 +314,7 @@
     <!-- Modal de Autenticación Requerida -->
     <div v-if="showAuthModal" class="auth-modal-overlay">
       <div class="auth-modal">
-        <button @click="closeAuthModal" class="modal-close-btn">✕</button>
+        <button @click="closeAuthModal" class="modal-close-btn" aria-label="Cerrar modal">✕</button>
         
         <div class="modal-content">
           <div class="modal-icon">🔐</div>
@@ -1010,6 +1053,11 @@ onBeforeUnmount(() => {
   transform: translateY(-8px);
 }
 
+.product-card:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: 2px;
+}
+
 .product-image {
   width: 100%;
   height: 200px;
@@ -1208,6 +1256,11 @@ onBeforeUnmount(() => {
 
 .modal-close-btn:hover {
   color: #374151;
+}
+
+.modal-close-btn:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .modal-content {

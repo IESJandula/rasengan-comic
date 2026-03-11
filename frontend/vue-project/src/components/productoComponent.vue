@@ -24,8 +24,13 @@
             :src="image"
             :alt="product.name"
             @click="currentImage = image"
+            @keydown.enter="currentImage = image"
+            @keydown.space.prevent="currentImage = image"
             :class="{ active: currentImage === image }"
             class="thumbnail"
+            tabindex="0"
+            role="button"
+            :aria-label="`Seleccionar imagen ${index + 1} de ${product.name}`"
           />
         </div>
       </div>
@@ -82,9 +87,9 @@
           <div class="quantity-selector">
             <label for="quantity">Cantidad:</label>
             <div class="quantity-controls">
-              <button @click="quantity > 1 ? quantity-- : null" class="qty-btn" :disabled="product.stock === 0">-</button>
+              <button @click="quantity > 1 ? quantity-- : null" class="qty-btn" :disabled="product.stock === 0" aria-label="Disminuir cantidad">-</button>
               <input v-model.number="quantity" type="number" min="1" :max="product.stock" id="quantity" :disabled="product.stock === 0" />
-              <button @click="quantity < product.stock ? quantity++ : null" class="qty-btn" :disabled="product.stock === 0 || quantity >= product.stock">+</button>
+              <button @click="quantity < product.stock ? quantity++ : null" class="qty-btn" :disabled="product.stock === 0 || quantity >= product.stock" aria-label="Aumentar cantidad">+</button>
             </div>
           </div>
 
@@ -150,7 +155,17 @@
     <div v-if="relatedProducts.length > 0" class="related-products">
       <h2>Productos relacionados</h2>
       <div class="products-grid">
-        <div v-for="relProduct in relatedProducts" :key="relProduct.id" class="product-card" @click="viewProduct(relProduct.id)">
+        <div
+          v-for="relProduct in relatedProducts"
+          :key="relProduct.id"
+          class="product-card"
+          @click="viewProduct(relProduct.id)"
+          @keydown.enter="viewProduct(relProduct.id)"
+          @keydown.space.prevent="viewProduct(relProduct.id)"
+          tabindex="0"
+          role="button"
+          :aria-label="`Ver producto relacionado ${relProduct.name}`"
+        >
           <img :src="relProduct.image" :alt="relProduct.name" />
           <h4>{{ relProduct.name }}</h4>
           <p class="price">{{ relProduct.price }}€</p>
@@ -743,6 +758,11 @@ const viewProduct = (productId: number) => {
 .product-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.product-card:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .product-card img {

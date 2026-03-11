@@ -5,12 +5,14 @@
         v-if="isMobile"
         class="mobile-filter-toggle"
         @click="showMobileFilters = !showMobileFilters"
+        :aria-expanded="showMobileFilters"
+        aria-controls="catalog-filters"
       >
         {{ showMobileFilters ? 'Ocultar filtros' : 'Mostrar filtros' }}
       </button>
 
       <!-- Filtros (Izquierda) -->
-      <aside v-show="!isMobile || showMobileFilters" class="filters-sidebar">
+      <aside v-show="!isMobile || showMobileFilters" class="filters-sidebar" id="catalog-filters">
         <h2 class="filters-title">Filtros</h2>
 
         <!-- Ordenar por -->
@@ -366,6 +368,11 @@
             :key="product.id"
             class="product-card"
             @click="viewProduct(product.id)"
+            @keydown.enter="viewProduct(product.id)"
+            @keydown.space.prevent="viewProduct(product.id)"
+            tabindex="0"
+            role="button"
+            :aria-label="`Ver detalle de ${product.name}`"
             style="cursor: pointer;"
           >
             <div class="product-image-container">
@@ -387,6 +394,7 @@
               <button 
                 @click.stop="addToCart(product.id)"
                 :disabled="!product.available && !product.isReserve"
+                :aria-label="product.isReserve ? `Reservar ${product.name}` : `Agregar ${product.name} al carrito`"
                 :class="[
                   'add-to-cart-btn', 
                   product.isReserve ? 'reserve-btn' : '',
@@ -1403,6 +1411,11 @@ const viewProduct = (productId: number) => {
 .product-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.product-card:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .product-image-container {

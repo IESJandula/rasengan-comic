@@ -5,7 +5,14 @@
     
     <div class="nav-container">
       <!-- Botón hamburguesa para móvil -->
-      <button class="hamburger-button" @click="toggleMenu" :class="{ active: isMenuOpen }">
+      <button
+        class="hamburger-button"
+        @click="toggleMenu"
+        :class="{ active: isMenuOpen }"
+        :aria-expanded="isMenuOpen"
+        aria-controls="navbar-menu"
+        aria-label="Abrir menú de navegación"
+      >
         <span></span>
         <span></span>
         <span></span>
@@ -15,7 +22,7 @@
         <img src="@/assets/img_logo.png" alt="Logo" />
       </router-link>
 
-      <ul class="navbar-menu" :class="{ 'menu-open': isMenuOpen }">
+      <ul class="navbar-menu" :class="{ 'menu-open': isMenuOpen }" id="navbar-menu">
         <li class="mobile-home-item"><router-link to="/" class="nav-link" @click="closeMenu">🏠 Inicio</router-link></li>
         <li><router-link to="/tienda" class="nav-link" @click="closeMenu">Tienda</router-link></li>
         <li><router-link to="/eventos" class="nav-link" @click="closeMenu">Eventos</router-link></li>
@@ -59,6 +66,7 @@
             v-if="searchQuery" 
             @click="clearSearch" 
             class="clear-button"
+            aria-label="Limpiar búsqueda"
           >
             ✕
           </button>
@@ -70,6 +78,11 @@
               :key="product.id"
               class="search-result-item"
               @click="selectSearchResult(product)"
+              @keydown.enter="selectSearchResult(product)"
+              @keydown.space.prevent="selectSearchResult(product)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver ${product.name}`"
             >
               <div class="result-info">
                 <div class="result-name">{{ product.name }}</div>
@@ -483,6 +496,13 @@ const selectSearchResult = (product: any): void => {
 
 .search-result-item:hover {
   background-color: #f9fafb;
+}
+
+.search-result-item:focus-visible,
+.hamburger-button:focus-visible,
+.clear-button:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .result-info {
