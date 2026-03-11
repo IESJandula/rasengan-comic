@@ -8,6 +8,7 @@ public class StripeCheckoutRequest {
     private String usuarioEmail;
     private String usuarioNombre;
     private String metodoEntrega;
+    private String codigoDescuento;
     private List<Item> items;
 
     public StripeCheckoutRequest() {}
@@ -23,6 +24,9 @@ public class StripeCheckoutRequest {
 
     public String getMetodoEntrega() { return metodoEntrega; }
     public void setMetodoEntrega(String metodoEntrega) { this.metodoEntrega = metodoEntrega; }
+
+    public String getCodigoDescuento() { return codigoDescuento; }
+    public void setCodigoDescuento(String codigoDescuento) { this.codigoDescuento = codigoDescuento; }
 
     public List<Item> getItems() { return items; }
     public void setItems(List<Item> items) { this.items = items; }

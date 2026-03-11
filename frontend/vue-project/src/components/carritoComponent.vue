@@ -84,11 +84,6 @@
           </div>
 
           <div class="summary-item">
-            <span>IVA</span>
-            <span>{{ taxes.toFixed(2) }}€</span>
-          </div>
-
-          <div class="summary-item">
             <span>Envío</span>
             <span v-if="deliveryMethod === 'tienda'" class="free-shipping">Gratis (Recogida en tienda)</span>
             <span v-else-if="subtotal > 50" class="free-shipping">Gratis</span>
@@ -174,7 +169,6 @@ const router = useRouter()
 const cartItems = computed(() => cartStore.items)
 const subtotal = computed(() => cartStore.subtotal)
 const shipping = computed(() => cartStore.shipping)
-const taxes = computed(() => cartStore.taxes)
 const total = computed(() => cartStore.total)
 
 const promoCode = ref('')
@@ -250,7 +244,7 @@ const calculatedShipping = computed(() => {
 
 // Calcular total con el envío correcto
 const calculatedTotal = computed(() => {
-  return Math.max(0, subtotal.value + taxes.value + calculatedShipping.value - appliedDiscountAmount.value)
+  return Math.max(0, subtotal.value + calculatedShipping.value - appliedDiscountAmount.value)
 })
 
 // Validar si se puede proceder al pago
@@ -321,7 +315,7 @@ const applyPromo = async () => {
       return
     }
 
-    appliedDiscountAmount.value = Math.min(discountAmount, subtotal.value + taxes.value + calculatedShipping.value)
+    appliedDiscountAmount.value = Math.min(discountAmount, subtotal.value + calculatedShipping.value)
     appliedDiscountCode.value = normalizedCode
     promoCode.value = normalizedCode
     alert(`Código aplicado correctamente: ${normalizedCode}`)
@@ -335,7 +329,7 @@ const applyPromo = async () => {
   }
 }
 
-watch([subtotal, taxes, calculatedShipping], () => {
+watch([subtotal, calculatedShipping], () => {
   if (appliedDiscountAmount.value > 0) {
     appliedDiscountAmount.value = 0
     appliedDiscountCode.value = ''
@@ -399,6 +393,7 @@ const checkout = async () => {
       usuarioEmail: authStore.user.email,
       usuarioNombre: authStore.user.name,
       metodoEntrega: deliveryMethod.value,
+      codigoDescuento: appliedDiscountCode.value || null,
       direccionEnvio: deliveryMethod.value === 'envio' ? userAddress.value : null,
       items: cartItems.value.map((item) => ({
         productoId: item.id,
