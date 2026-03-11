@@ -437,6 +437,26 @@ import api from '../api/axios'
 import { useCartStore } from '@/stores/cartStore'
 
 const getImageUrl = (imageName: string) => {
+  if (!imageName) return ''
+
+  if (
+    imageName.startsWith('http://') ||
+    imageName.startsWith('https://') ||
+    imageName.startsWith('data:') ||
+    imageName.startsWith('blob:')
+  ) {
+    return imageName
+  }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+  if (imageName.startsWith('/')) {
+    return `${baseUrl}${imageName}`
+  }
+
+  if (imageName.startsWith('uploads/')) {
+    return `${baseUrl}/${imageName}`
+  }
+
   return new URL(`../assets/delete_inicio/${imageName}`, import.meta.url).href
 }
 

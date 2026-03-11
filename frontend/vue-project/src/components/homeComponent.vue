@@ -357,6 +357,26 @@ import banner3 from '@/assets/images/banner3.webp';
 
 // Función para cargar imágenes desde delete_inicio
 const getImageUrl = (imageName: string) => {
+  if (!imageName) return ''
+
+  if (
+    imageName.startsWith('http://') ||
+    imageName.startsWith('https://') ||
+    imageName.startsWith('data:') ||
+    imageName.startsWith('blob:')
+  ) {
+    return imageName
+  }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+  if (imageName.startsWith('/')) {
+    return `${baseUrl}${imageName}`
+  }
+
+  if (imageName.startsWith('uploads/')) {
+    return `${baseUrl}/${imageName}`
+  }
+
   return new URL(`../assets/delete_inicio/${imageName}`, import.meta.url).href
 }
 
@@ -370,6 +390,16 @@ const resolveImageUrl = (image?: string): string => {
   ) {
     return image
   }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+  if (image.startsWith('/')) {
+    return `${baseUrl}${image}`
+  }
+
+  if (image.startsWith('uploads/')) {
+    return `${baseUrl}/${image}`
+  }
+
   return new URL(`../assets/delete_inicio/${image}`, import.meta.url).href
 }
 
@@ -392,10 +422,18 @@ const resolveCarouselSlideUrl = (image?: string): string => {
     image.startsWith('http://') ||
     image.startsWith('https://') ||
     image.startsWith('data:') ||
-    image.startsWith('blob:') ||
-    image.startsWith('/')
+    image.startsWith('blob:')
   ) {
     return image
+  }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+  if (image.startsWith('/')) {
+    return `${baseUrl}${image}`
+  }
+
+  if (image.startsWith('uploads/')) {
+    return `${baseUrl}/${image}`
   }
 
   return new URL(`../assets/delete_inicio/${image}`, import.meta.url).href

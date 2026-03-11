@@ -11,6 +11,8 @@ public class Producto {
     private Long id;
 
     private String nombre;
+    @Column(name = "source_product_id", unique = true)
+    private Long sourceProductId;
     private Long categoriaId;
     private Long subcategoriaId;
     @Column(length = 2000)
@@ -39,6 +41,9 @@ public class Producto {
 
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
+
+    public Long getSourceProductId() { return sourceProductId; }
+    public void setSourceProductId(Long sourceProductId) { this.sourceProductId = sourceProductId; }
 
     public String getDescripcion() { return descripcion; }
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }

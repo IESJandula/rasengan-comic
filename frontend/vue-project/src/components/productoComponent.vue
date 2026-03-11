@@ -204,6 +204,16 @@ const resolveImageUrl = (image?: string): string => {
   ) {
     return image;
   }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '');
+  if (image.startsWith('/')) {
+    return `${baseUrl}${image}`;
+  }
+
+  if (image.startsWith('uploads/')) {
+    return `${baseUrl}/${image}`;
+  }
+
   return new URL(`../assets/delete_inicio/${image}`, import.meta.url).href;
 };
 

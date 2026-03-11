@@ -161,23 +161,34 @@ public class PedidoService {
                 productRepository.save(product);
                 logger.info("【STOCK ACTUALIZADO】 Nuevo stock: {}", product.getStock());
                 
-                // NO usar item.getProductoId() sobre tabla productos: ese ID pertenece a tabla products
-                // y puede cruzarse con registros distintos. Vincular por nombre evita asociaciones erróneas.
-                Optional<Producto> optProducto = productoRepository.findByNombre(product.getName());
+                // Relación estable entre tabla products y tabla productos usando sourceProductId.
+                Optional<Producto> optProducto = productoRepository.findBySourceProductId(product.getId());
+                if (optProducto.isEmpty()) {
+                    optProducto = productoRepository.findByNombre(product.getName());
+                }
+
                 Producto producto;
                 if (optProducto.isPresent()) {
                     producto = optProducto.get();
-                    logger.info("【PRODUCTO EXISTE EN PRODUCTOS】 ID: {}, Nombre: {}", producto.getId(), producto.getNombre());
-                } else {
-                    // Crear producto en tabla productos desde products si no existe.
-                    // Dejar que la PK sea autogenerada evita conflictos entre IDs de tablas distintas.
-                    producto = new Producto();
+                    if (producto.getSourceProductId() == null) {
+                        producto.setSourceProductId(product.getId());
+                    }
                     producto.setNombre(product.getName());
                     producto.setDescripcion(product.getCategory() + (product.getSubcategory() != null ? " - " + product.getSubcategory() : ""));
                     producto.setPrecio(product.getPrice());
                     producto.setStock(product.getStock());
                     producto = productoRepository.save(producto);
-                    logger.info("【PRODUCTO CREADO EN TABLA productos】 ID: {}, Nombre: {}", producto.getId(), producto.getNombre());
+                    logger.info("【PRODUCTO EXISTE EN PRODUCTOS】 ID: {}, sourceProductId: {}, Nombre: {}", producto.getId(), producto.getSourceProductId(), producto.getNombre());
+                } else {
+                    // Crear producto en tabla productos vinculado al ID real de products.
+                    producto = new Producto();
+                    producto.setSourceProductId(product.getId());
+                    producto.setNombre(product.getName());
+                    producto.setDescripcion(product.getCategory() + (product.getSubcategory() != null ? " - " + product.getSubcategory() : ""));
+                    producto.setPrecio(product.getPrice());
+                    producto.setStock(product.getStock());
+                    producto = productoRepository.save(producto);
+                    logger.info("【PRODUCTO CREADO EN TABLA productos】 ID: {}, sourceProductId: {}, Nombre: {}", producto.getId(), producto.getSourceProductId(), producto.getNombre());
                 }
                 
                 DetallePedido detalle = new DetallePedido();

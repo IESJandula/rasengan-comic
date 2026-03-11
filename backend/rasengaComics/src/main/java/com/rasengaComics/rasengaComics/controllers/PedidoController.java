@@ -137,14 +137,18 @@ public class PedidoController {
         }
         return detalles.stream().map(detalle -> {
             PedidoResponse.Item item = new PedidoResponse.Item();
-            item.setProductoId(detalle.getProducto().getId());
+            Long sourceProductId = detalle.getProducto().getSourceProductId();
+            item.setProductoId(sourceProductId != null ? sourceProductId : detalle.getProducto().getId());
             item.setNombre(detalle.getProducto().getNombre());
             item.setPrecio(detalle.getPrecioUnitario());
             item.setCantidad(detalle.getCantidad());
 
-            Optional<Product> productInfo = productRepository.findByName(detalle.getProducto().getNombre());
+            Optional<Product> productInfo = Optional.empty();
+            if (sourceProductId != null) {
+                productInfo = productRepository.findById(sourceProductId);
+            }
             if (productInfo.isEmpty()) {
-                productInfo = productRepository.findById(detalle.getProducto().getId());
+                productInfo = productRepository.findByName(detalle.getProducto().getNombre());
             }
             
             // Fallback por estado: si ya va por flujo de reservas, no perder el item aunque falle lookup.

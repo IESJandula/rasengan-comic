@@ -806,6 +806,31 @@ interface EnvioAdmin {
 const authStore = useAuthStore()
 const router = useRouter()
 
+const resolveBackendImageUrl = (image?: string): string => {
+  if (!image) return ''
+
+  if (
+    image.startsWith('http://') ||
+    image.startsWith('https://') ||
+    image.startsWith('data:') ||
+    image.startsWith('blob:')
+  ) {
+    return image
+  }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+
+  if (image.startsWith('/')) {
+    return `${baseUrl}${image}`
+  }
+
+  if (image.startsWith('uploads/')) {
+    return `${baseUrl}/${image}`
+  }
+
+  return image
+}
+
 // Verificar si es admin
 const isAdmin = computed(() => {
   return authStore.user?.email === 'admin@rasengacomics.com'
@@ -888,7 +913,9 @@ const loadProductos = async () => {
       stock: p.stock || 0,
       discount: p.discount || 0,
       description: p.description || '',
-      image: p.image && p.image.trim() ? p.image : 'https://via.placeholder.com/150?text=Sin+imagen'
+      image: p.image && p.image.trim()
+        ? resolveBackendImageUrl(p.image)
+        : 'https://via.placeholder.com/150?text=Sin+imagen'
     }))
     console.log('✅ Productos cargados:', products.value.length)
     console.log('📦 Primeros productos:', products.value.slice(0, 3))
@@ -1134,7 +1161,7 @@ const handleCarouselImageUpload = async (event: any, index: number): Promise<voi
     if (!response.data?.url) {
       throw new Error('No se recibio URL de imagen')
     }
-    carouselSlides.value[index] = response.data.url
+    carouselSlides.value[index] = resolveBackendImageUrl(response.data.url)
   } catch (error: any) {
     console.error('Error al subir imagen del carrusel:', error)
     const errorMsg = error.response?.data?.message || error.message || 'Error desconocido'
@@ -1501,9 +1528,10 @@ const handleImageUpload = async (event: any): Promise<void> => {
     console.log('✅ Respuesta del servidor:', response.data)
     
     if (response.data?.url) {
-      productForm.value.image = response.data.url
-      imagePreview.value = response.data.url
-      console.log('✅ Imagen subida correctamente:', response.data.url)
+      const normalizedUrl = resolveBackendImageUrl(response.data.url)
+      productForm.value.image = normalizedUrl
+      imagePreview.value = normalizedUrl
+      console.log('✅ Imagen subida correctamente:', normalizedUrl)
     } else {
       console.error('❌ No hay URL en la respuesta:', response.data)
       alert('❌ Error: El servidor no devolvió la URL de la imagen')
