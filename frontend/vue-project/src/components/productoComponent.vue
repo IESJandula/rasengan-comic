@@ -53,35 +53,6 @@
           </div>
         </div>
 
-        <!-- Descripción -->
-        <div class="description">
-          <h3>Descripción</h3>
-          <p>{{ product.description }}</p>
-        </div>
-
-        <!-- Especificaciones -->
-        <div class="specifications">
-          <h3>Especificaciones</h3>
-          <div class="specs-grid">
-            <div class="spec-item">
-              <span class="spec-label">Autor:</span>
-              <span class="spec-value">{{ product.author }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-label">Editorial:</span>
-              <span class="spec-value">{{ product.publisher }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-label">Año:</span>
-              <span class="spec-value">{{ product.year }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-label">Páginas:</span>
-              <span class="spec-value">{{ product.pages }}</span>
-            </div>
-          </div>
-        </div>
-
         <!-- Cantidad y botones -->
         <div class="actions">
           <div class="quantity-selector">
@@ -231,16 +202,12 @@ interface Product {
   price: number;
   originalPrice?: number;
   discount?: number;
-  rating: number;
-  reviews: number;
   available: boolean;
   stock: number;
   isReserve?: boolean;
   description: string;
   author: string;
   publisher: string;
-  year: number;
-  pages: number;
   images: string[];
 }
 
@@ -251,15 +218,11 @@ const product = ref<Product>({
   price: 12.99,
   originalPrice: 14.99,
   discount: 10,
-  rating: 5,
-  reviews: 145,
   available: true,
   stock: 0,
   description: 'El volumen 100 de One Piece es un hito histórico en la serie. Esta edición especial incluye extras exclusivos, póster desplegable y cubierta holográfica. Una debe para cualquier fan de One Piece.',
   author: 'Eiichiro Oda',
   publisher: 'Planeta Manga',
-  year: 2024,
-  pages: 192,
   images: [
     'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=600&h=800&fit=crop',
     'https://images.unsplash.com/photo-1594743315886-a18d195ce546?w=600&h=800&fit=crop',
@@ -559,47 +522,6 @@ const viewProduct = (productId: number) => {
   color: #10b981;
   font-weight: 600;
   font-size: 14px;
-}
-
-.description h3,
-.specifications h3 {
-  font-size: 18px;
-  font-weight: bold;
-  color: #1f2937;
-  margin: 0 0 10px 0;
-}
-
-.description p {
-  color: #6b7280;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.specifications {
-  background-color: #f9fafb;
-  padding: 15px;
-  border-radius: 8px;
-}
-
-.specs-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-
-.spec-item {
-  display: flex;
-  gap: 8px;
-}
-
-.spec-label {
-  font-weight: 600;
-  color: #374151;
-  min-width: 80px;
-}
-
-.spec-value {
-  color: #6b7280;
 }
 
 .actions {

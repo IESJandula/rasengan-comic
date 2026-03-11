@@ -140,11 +140,33 @@
               </div>
               <div class="form-group">
                 <label for="productCategory">📂 Categoría</label>
-                <input id="productCategory" v-model="productForm.category" placeholder="Ej: Manga, Comics, Merchandising" required />
+                <select id="productCategory" v-model="productForm.category" required>
+                  <option value="">Selecciona una categoría</option>
+                  <option v-for="cat in productCategories" :key="cat" :value="cat">{{ cat }}</option>
+                  <option
+                    v-if="productForm.category && !productCategories.includes(productForm.category)"
+                    :value="productForm.category"
+                  >
+                    {{ productForm.category }}
+                  </option>
+                </select>
               </div>
               <div class="form-group">
                 <label for="productSubcategory">🏷️ Subcategoría (opcional)</label>
-                <input id="productSubcategory" v-model="productForm.subcategory" placeholder="Ej: Shonen, Adventure" />
+                <select
+                  id="productSubcategory"
+                  v-model="productForm.subcategory"
+                  :disabled="!productForm.category"
+                >
+                  <option value="">Sin subcategoría</option>
+                  <option v-for="sub in availableProductSubcategories" :key="sub" :value="sub">{{ sub }}</option>
+                  <option
+                    v-if="productForm.subcategory && !availableProductSubcategories.includes(productForm.subcategory)"
+                    :value="productForm.subcategory"
+                  >
+                    {{ productForm.subcategory }}
+                  </option>
+                </select>
               </div>
               <div class="form-group">
                 <label for="productPrice">💰 Precio</label>
@@ -706,7 +728,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
@@ -1312,6 +1334,21 @@ const marcarPedidoRecogido = async (pedidoId: number): Promise<void> => {
 // Productos
 const showProductForm = ref(false)
 const editingProduct = ref<Product | null>(null)
+const productCategories = ['TCG', 'Manga', 'Comics', 'Figuras', 'Juegos de mesa', 'Accesorios', 'Merchandising']
+const productSubcategoriesByCategory: Record<string, string[]> = {
+  TCG: ['Yu-Gi-Oh', 'Magic', 'Pokemon', 'One Piece', 'Digimon', 'Dragon Ball'],
+  Manga: ['Shonen', 'Seinen', 'Shojo', 'Josei', 'Kodomo'],
+  Comics: ['Marvel', 'DC', 'Image', 'Dark Horse', 'Independientes'],
+  Figuras: ['Nendoroid', 'Funko Pop', 'Scale Figures', 'Estatuas', 'Bustos'],
+  'Juegos de mesa': ['Estrategia', 'Familiar', 'Party', 'Cooperativos', 'Rol'],
+  Accesorios: ['Fundas', 'Deck Box', 'Playmat', 'Dados', 'Carpetas'],
+  Merchandising: ['Ropa', 'Pósters', 'Llaveros', 'Tazas', 'Otros']
+}
+
+const availableProductSubcategories = computed(() => {
+  return productSubcategoriesByCategory[productForm.value.category] || []
+})
+
 const productForm = ref({
   name: '',
   category: '',
@@ -1329,6 +1366,16 @@ const productForm = ref({
 })
 const imagePreview = ref<string | null>(null)
 const uploadingImage = ref(false)
+
+watch(
+  () => productForm.value.category,
+  (newCategory) => {
+    const options = productSubcategoriesByCategory[newCategory] || []
+    if (options.length > 0 && productForm.value.subcategory && !options.includes(productForm.value.subcategory)) {
+      productForm.value.subcategory = ''
+    }
+  }
+)
 
 const products = ref<Product[]>([])
 
