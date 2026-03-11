@@ -401,6 +401,16 @@
         </div>
       </main>
     </div>
+
+    <Transition name="toast">
+      <div v-if="showToast" class="toast-notification">
+        <div class="toast-icon">✅</div>
+        <div class="toast-content">
+          <h4 class="toast-title">¡Producto agregado!</h4>
+          <p class="toast-message">{{ toastMessage }}</p>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -439,6 +449,8 @@ const products = ref<Product[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const recentlyAddedProducts = ref<Set<number>>(new Set())
+const showToast = ref(false)
+const toastMessage = ref('')
 
 // Función para cargar productos desde la API
 const loadProducts = async () => {
@@ -1100,10 +1112,19 @@ const addToCart = (productId: number) => {
   // Agregar producto a la lista de recientemente agregados
   recentlyAddedProducts.value.add(productId)
 
+  // Mostrar notificación toast
+  toastMessage.value = `1 unidad(es) de ${product.name}`
+  showToast.value = true
+
   // Remover después de 1.5 segundos para que se vea la animación
   setTimeout(() => {
     recentlyAddedProducts.value.delete(productId)
   }, 1500)
+
+  // Ocultar toast después de 3 segundos
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
 }
 
 const viewProduct = (productId: number) => {
@@ -1583,6 +1604,76 @@ const viewProduct = (productId: number) => {
   background-color: #b91c1c;
 }
 
+.toast-notification {
+  position: fixed;
+  top: 100px;
+  right: 30px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 20px 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 9999;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.toast-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
+.toast-message {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.4;
+}
+
+.toast-enter-active {
+  animation: toast-in 0.3s ease-out;
+}
+
+.toast-leave-active {
+  animation: toast-out 0.3s ease-in;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
 @media (max-width: 1024px) {
   .products-wrapper {
     flex-direction: column;
@@ -1643,6 +1734,14 @@ const viewProduct = (productId: number) => {
 
   .current-price {
     font-size: 16px;
+  }
+
+  .toast-notification {
+    top: 80px;
+    right: 15px;
+    left: 15px;
+    min-width: auto;
+    max-width: none;
   }
 }
 
