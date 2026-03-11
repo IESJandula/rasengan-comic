@@ -1,0 +1,19 @@
+{
+  "name": "Rasengan Comics",
+  "short_name": "Rasengan",
+  "description": "Tienda especializada en manga, TCG y cómics americanos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e63946",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["shopping", "entertainment"],
+  "lang": "es-ES"
+}

@@ -179,6 +179,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCartStore } from '@/stores/cartStore';
+import { useSeo, seoJsonLd } from '@/composables/useSeo';
 import api from '../api/axios';
 
 const router = useRouter();
@@ -272,6 +273,28 @@ const loadProduct = async () => {
     if (product.value.images.length > 0) {
       currentImage.value = product.value.images[0] || currentImage.value;
     }
+
+    // SEO dinámico para el producto
+    useSeo({
+      title: product.value.name,
+      description: product.value.description
+        ? product.value.description.slice(0, 160)
+        : `Compra ${product.value.name} en Rasengan Comics. ${product.value.category}. Envíos a toda España.`,
+      image: product.value.images[0] || undefined,
+      url: `https://rasengacomics.com/producto/${product.value.id}`,
+      type: 'product',
+      structuredData: seoJsonLd.product({
+        id: product.value.id,
+        name: product.value.name,
+        description: product.value.description,
+        price: product.value.price,
+        image: product.value.images[0] || '',
+        category: product.value.category,
+        author: product.value.author,
+        publisher: product.value.publisher,
+        available: product.value.available,
+      }),
+    });
     
     // Cargar productos relacionados de la misma categoría
     await loadRelatedProducts();
