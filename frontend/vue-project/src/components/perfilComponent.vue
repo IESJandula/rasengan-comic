@@ -634,22 +634,38 @@ const totalGastado = computed(() => {
   return compras.value.reduce((sum, pedido) => sum + (pedido.total || 0), 0)
 })
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
 const confirmarSesionStripePendiente = async () => {
   const sessionIdFromQuery = typeof route.query.session_id === 'string' ? route.query.session_id : ''
   const sessionIdFromStorage = localStorage.getItem('pendingStripeSessionId') || ''
   const sessionId = sessionIdFromQuery || sessionIdFromStorage
 
   if (!sessionId) {
-    return
+    return false
   }
 
-  try {
-    await api.post('/stripe/confirm-session', { sessionId })
-  } catch (error) {
-    console.error('Error confirmando sesión Stripe:', error)
-  } finally {
-    localStorage.removeItem('pendingStripeSessionId')
+  const maxAttempts = 4
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await api.post('/stripe/confirm-session', { sessionId })
+      localStorage.removeItem('pendingStripeSessionId')
+      return true
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message || ''
+      const shouldRetry = backendMessage.toLowerCase().includes('aún no está pagada')
+
+      console.error(`Error confirmando sesión Stripe (intento ${attempt}/${maxAttempts}):`, error)
+
+      if (!shouldRetry || attempt === maxAttempts) {
+        return false
+      }
+
+      await delay(1200 * attempt)
+    }
   }
+
+  return false
 }
 
 // Cargar compras
@@ -747,6 +763,14 @@ onMounted(async () => {
   } else if (activeTab.value === 'Mis compras') {
     loadCompras()
   }
+
+  // Fallback: si hay una sesión pendiente guardada, intentar confirmarla siempre
+  if (localStorage.getItem('pendingStripeSessionId')) {
+    await confirmarSesionStripePendiente()
+    if (activeTab.value === 'Mis compras') {
+      await loadCompras()
+    }
+  }
 })
 
 watch(
@@ -768,6 +792,19 @@ watch(activeTab, (value) => {
     loadCompras()
   }
 })
+
+watch(
+  () => authStore.isAuthenticated,
+  async (isAuthenticated) => {
+    if (!isAuthenticated) return
+    if (!localStorage.getItem('pendingStripeSessionId')) return
+
+    const confirmada = await confirmarSesionStripePendiente()
+    if (confirmada && activeTab.value === 'Mis compras') {
+      await loadCompras()
+    }
+  }
+)
 </script>
 
 <style scoped>

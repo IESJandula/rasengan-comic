@@ -4,6 +4,8 @@ import com.rasengaComics.rasengaComics.dto.request.StripeCheckoutRequest;
 import com.rasengaComics.rasengaComics.dto.response.ApiResponse;
 import com.rasengaComics.rasengaComics.services.StripeService;
 import com.stripe.exception.StripeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/stripe")
 public class StripeController {
+
+    private static final Logger logger = LoggerFactory.getLogger(StripeController.class);
 
     private final StripeService stripeService;
 
@@ -31,9 +35,12 @@ public class StripeController {
     public ResponseEntity<?> confirmarCheckoutSession(@RequestBody java.util.Map<String, String> body) {
         try {
             String sessionId = body.get("sessionId");
+            logger.info("【CONFIRM SESSION】 sessionId={}", sessionId);
             stripeService.confirmarSesionCheckout(sessionId);
+            logger.info("【CONFIRM SESSION OK】 sessionId={}", sessionId);
             return ResponseEntity.ok(new ApiResponse(true, "Pedido confirmado correctamente", null));
         } catch (IllegalArgumentException | StripeException e) {
+            logger.warn("【CONFIRM SESSION ERROR】 {}", e.getMessage());
             return ResponseEntity.status(400).body(new ApiResponse(false, e.getMessage(), null));
         }
     }

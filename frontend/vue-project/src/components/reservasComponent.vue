@@ -142,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import api from '@/api/axios'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -346,6 +346,14 @@ onMounted(() => {
   loadReservas()
   startTimer()
 })
+
+watch(
+  () => authStore.user?.uid,
+  async (uid) => {
+    if (!uid) return
+    await loadReservas()
+  }
+)
 
 onBeforeUnmount(() => {
   if (timerInterval) {

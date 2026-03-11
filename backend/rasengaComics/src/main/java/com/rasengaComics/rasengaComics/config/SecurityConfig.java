@@ -36,6 +36,7 @@ public class SecurityConfig {
                     .requestMatchers("/eventos/**").permitAll() // Permitir acceso completo a eventos (GET, POST, PUT, DELETE)
                     .requestMatchers(HttpMethod.GET, "/reservas/**").permitAll() // Permitir lectura de reservas
                     .requestMatchers(HttpMethod.POST, "/stripe/webhook").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/stripe/confirm-session").permitAll()
                     .requestMatchers("/hola", "/public/**", "/auth/**", "/error").permitAll()
                     .anyRequest().authenticated()
                 )
