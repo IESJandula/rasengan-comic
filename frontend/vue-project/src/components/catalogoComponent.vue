@@ -447,9 +447,11 @@ const loadProducts = async () => {
     error.value = null
     const response = await api.get('/api/products')
     // Transformar las imágenes a URLs completas
+    // Un producto no-reserva se considera disponible solo si available=true Y stock>0
     products.value = response.data.map((product: Product) => ({
       ...product,
-      image: getImageUrl(product.image)
+      image: getImageUrl(product.image),
+      available: product.isReserve ? product.available : (product.available && (product.stock ?? 0) > 0)
     }))
     console.log('✅ Productos cargados:', response.data.length)
   } catch (err) {
