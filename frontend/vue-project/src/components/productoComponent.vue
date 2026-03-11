@@ -209,6 +209,7 @@ interface Product {
   reviews: number;
   available: boolean;
   stock: number;
+  isReserve?: boolean;
   description: string;
   author: string;
   publisher: string;
@@ -254,7 +255,7 @@ const loadProduct = async () => {
     };
     
     if (product.value.images.length > 0) {
-      currentImage.value = product.value.images[0];
+      currentImage.value = product.value.images[0] || currentImage.value;
     }
     
     // Cargar productos relacionados de la misma categoría
@@ -306,7 +307,7 @@ const addToCart = () => {
       name: product.value.name,
       category: product.value.category,
       price: product.value.price,
-      image: product.value.images[0],
+      image: product.value.images[0] || currentImage.value,
       stock: product.value.stock
     }, quantity.value);
     

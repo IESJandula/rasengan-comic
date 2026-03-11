@@ -2,10 +2,8 @@ package com.rasengaComics.rasengaComics.services;
 
 import com.rasengaComics.rasengaComics.models.Carrito;
 import com.rasengaComics.rasengaComics.models.Usuario;
-import com.rasengaComics.rasengaComics.models.Producto;
 import com.rasengaComics.rasengaComics.repositories.CarritoRepository;
 import com.rasengaComics.rasengaComics.repositories.UsuarioRepository;
-import com.rasengaComics.rasengaComics.repositories.ProductoRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,14 +14,11 @@ public class CarritoService {
 
     private final CarritoRepository carritoRepository;
     private final UsuarioRepository usuarioRepository;
-    private final ProductoRepository productoRepository;
 
     public CarritoService(CarritoRepository carritoRepository,
-                        UsuarioRepository usuarioRepository,
-                        ProductoRepository productoRepository) {
+                        UsuarioRepository usuarioRepository) {
         this.carritoRepository = carritoRepository;
         this.usuarioRepository = usuarioRepository;
-        this.productoRepository = productoRepository;
     }
 
     // Obtener o crear carrito para un usuario

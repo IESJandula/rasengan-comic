@@ -116,12 +116,12 @@ public class StripeService {
     }
 
     public void procesarCheckoutCompletado(Session session) throws StripeException {
-        logger.info("【PROCESANDO CHECKOUT】 SessionId: {}", session.getId());
-        
         if (session == null) {
             logger.error("【ERROR】 Session es null");
             return;
         }
+
+        logger.info("【PROCESANDO CHECKOUT】 SessionId: {}", session.getId());
 
         String usuarioUid = null;
         String metodoEntrega = "envio";

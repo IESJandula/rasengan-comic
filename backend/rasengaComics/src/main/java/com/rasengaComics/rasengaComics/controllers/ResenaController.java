@@ -3,7 +3,6 @@ package com.rasengaComics.rasengaComics.controllers;
 import com.rasengaComics.rasengaComics.services.ResenaService;
 import com.rasengaComics.rasengaComics.models.Resena;
 import com.rasengaComics.rasengaComics.dto.request.ResenaRequest;
-import com.rasengaComics.rasengaComics.dto.response.ResenaResponse;
 import com.rasengaComics.rasengaComics.dto.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

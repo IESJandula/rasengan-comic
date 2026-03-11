@@ -1,7 +1,11 @@
 <template>
   <div class="home-container">
     <!-- Carrusel -->
-    <div class="carousel-wrapper">
+    <div
+      class="carousel-wrapper"
+      @touchstart.passive="onTouchStart"
+      @touchend.passive="onTouchEnd"
+    >
       <div class="carousel-container">
         <img
           v-for="(slide, index) in slides"
@@ -651,6 +655,34 @@ const ultimosAccesorios = ref<any[]>([
   }
 ]);
 
+// Touch swipe
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+const SWIPE_THRESHOLD = 50
+
+const onTouchStart = (e: TouchEvent) => {
+  const touch = e.changedTouches[0]
+  if (!touch) {
+    return
+  }
+
+  touchStartX.value = touch.screenX
+}
+
+const onTouchEnd = (e: TouchEvent) => {
+  const touch = e.changedTouches[0]
+  if (!touch) {
+    return
+  }
+
+  touchEndX.value = touch.screenX
+  const diff = touchStartX.value - touchEndX.value
+  if (Math.abs(diff) > SWIPE_THRESHOLD) {
+    if (diff > 0) nextSlide()
+    else prevSlide()
+  }
+}
+
 let timer: ReturnType<typeof setInterval> | null = null;
 
 const prevSlide = () => {
@@ -855,20 +887,18 @@ onBeforeUnmount(() => {
 .carousel-wrapper {
   position: relative;
   width: 100%;
-  height: 500px;
+  height: clamp(220px, 36.5vw, 700px);
   overflow: hidden;
   background-color: #1f2937;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   margin-bottom: 40px;
+  touch-action: pan-y;
 }
 
 .carousel-container {
   position: relative;
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .carousel-image {
@@ -877,15 +907,10 @@ onBeforeUnmount(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   opacity: 0;
-  transition: opacity 1s ease-in-out;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  -webkit-backface-visibility: hidden;
-  -moz-backface-visibility: hidden;
-  backface-visibility: hidden;
+  transition: opacity 0.8s ease-in-out;
 }
 
 .carousel-image.active {
@@ -1316,10 +1341,6 @@ onBeforeUnmount(() => {
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .carousel-wrapper {
-    height: 400px;
-  }
-
   .section-title {
     font-size: 28px;
   }
@@ -1336,10 +1357,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .carousel-wrapper {
-    height: 350px;
-  }
-
   .content-wrapper {
     padding: 30px 15px;
   }
@@ -1385,10 +1402,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 480px) {
-  .carousel-wrapper {
-    height: 280px;
-  }
-
   .carousel-button {
     padding: 12px 16px;
     font-size: 16px;
