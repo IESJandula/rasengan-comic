@@ -55,7 +55,6 @@
 
             <div class="reserva-admin-body">
               <div class="cliente-info">
-                <img :src="reserva.cliente.avatar" :alt="reserva.cliente.nombre" class="cliente-avatar" />
                 <div class="cliente-details">
                   <h4>{{ reserva.cliente.nombre }}</h4>
                   <p>{{ reserva.cliente.email }}</p>
@@ -64,7 +63,6 @@
               </div>
 
               <div class="producto-reservado">
-                <img :src="reserva.producto.imagen" :alt="reserva.producto.nombre" class="producto-img" />
                 <div class="producto-info">
                   <h4>{{ reserva.producto.nombre }}</h4>
                   <p class="categoria">{{ reserva.producto.categoria }}</p>
@@ -142,11 +140,33 @@
               </div>
               <div class="form-group">
                 <label for="productCategory">📂 Categoría</label>
-                <input id="productCategory" v-model="productForm.category" placeholder="Ej: Manga, Comics, Merchandising" required />
+                <select id="productCategory" v-model="productForm.category" required>
+                  <option value="">Selecciona una categoría</option>
+                  <option v-for="cat in productCategories" :key="cat" :value="cat">{{ cat }}</option>
+                  <option
+                    v-if="productForm.category && !productCategories.includes(productForm.category)"
+                    :value="productForm.category"
+                  >
+                    {{ productForm.category }}
+                  </option>
+                </select>
               </div>
               <div class="form-group">
                 <label for="productSubcategory">🏷️ Subcategoría (opcional)</label>
-                <input id="productSubcategory" v-model="productForm.subcategory" placeholder="Ej: Shonen, Adventure" />
+                <select
+                  id="productSubcategory"
+                  v-model="productForm.subcategory"
+                  :disabled="!productForm.category"
+                >
+                  <option value="">Sin subcategoría</option>
+                  <option v-for="sub in availableProductSubcategories" :key="sub" :value="sub">{{ sub }}</option>
+                  <option
+                    v-if="productForm.subcategory && !availableProductSubcategories.includes(productForm.subcategory)"
+                    :value="productForm.subcategory"
+                  >
+                    {{ productForm.subcategory }}
+                  </option>
+                </select>
               </div>
               <div class="form-group">
                 <label for="productPrice">💰 Precio</label>
@@ -204,9 +224,9 @@
           <div v-for="product in products" :key="product.id" class="item-card">
             <div class="item-details">
               <h3>{{ product.name }}</h3>
-              <p>💰 ${{ product.price }}</p>
+              <p> ${{ product.price }}</p>
               <p :class="['stock-indicator', product.stock === 0 ? 'out-of-stock' : product.stock < 10 ? 'low-stock' : 'in-stock']">
-                📦 Stock: {{ product.stock }}
+                 Stock: {{ product.stock }}
               </p>
             </div>
             <div class="item-actions">
@@ -308,10 +328,10 @@
                   </span>
                 </div>
                 <div class="discount-actions-admin">
-                  <button @click="editDiscount(discount)" class="action-btn-admin edit-btn" title="Editar">
+                  <button @click="editDiscount(discount)" class="action-btn-admin discount-edit-btn" title="Editar">
                     Editar
                   </button>
-                  <button @click="deleteDiscount(discount.id)" class="action-btn-admin delete-btn" title="Eliminar">
+                  <button @click="deleteDiscount(discount.id)" class="action-btn-admin discount-delete-btn" title="Eliminar">
                     Borrar
                   </button>
                 </div>
@@ -459,6 +479,194 @@
         </div>
       </div>
 
+      <!-- Envios -->
+      <div v-if="activeTab === 'Envios'" class="admin-section">
+        <h1>Gestion de Envios</h1>
+
+        <div class="shipments-summary">
+          <div class="shipment-kpi">
+            <span class="kpi-label">Pendientes de gestion</span>
+            <strong class="kpi-value">{{ enviosPendientesCount }}</strong>
+          </div>
+          <div class="shipment-kpi">
+            <span class="kpi-label">A domicilio pendientes</span>
+            <strong class="kpi-value">{{ enviosDomicilioPendientesCount }}</strong>
+          </div>
+          <div class="shipment-kpi">
+            <span class="kpi-label">Recogida en tienda pendientes</span>
+            <strong class="kpi-value">{{ recogidasTiendaPendientesCount }}</strong>
+          </div>
+          <div class="shipment-kpi">
+            <span class="kpi-label">Pedidos listados</span>
+            <strong class="kpi-value">{{ enviosAdmin.length }}</strong>
+          </div>
+        </div>
+
+        <div v-if="enviosAdmin.length === 0" class="empty-reservas">
+          <p>No hay pedidos pendientes de gestion en envios.</p>
+        </div>
+
+        <div v-else class="shipments-list">
+          <section class="shipment-group">
+            <h2>Envio a domicilio</h2>
+            <div v-if="enviosDomicilioAdmin.length === 0" class="empty-reservas">
+              <p>No hay pedidos pendientes para envio a domicilio.</p>
+            </div>
+            <article v-for="envio in enviosDomicilioAdmin" :key="`dom-${envio.id}`" class="shipment-card">
+              <header class="shipment-header">
+                <div>
+                  <h3>Pedido #{{ envio.id }}</h3>
+                  <p class="shipment-date">{{ formatDate(envio.fechaPedido) }}</p>
+                </div>
+                <span :class="['status-badge', envio.estadoBadge]">{{ envio.estado }}</span>
+              </header>
+
+              <div class="shipment-grid">
+                <div>
+                  <h4>Destinatario</h4>
+                  <p>{{ envio.destinatario }}</p>
+                  <p>{{ envio.email }}</p>
+                  <p>{{ envio.telefono }}</p>
+                </div>
+
+                <div>
+                  <h4>Direccion de envio</h4>
+                  <p>{{ envio.direccion.calle }}</p>
+                  <p>{{ envio.direccion.codigoPostal }} {{ envio.direccion.ciudad }}</p>
+                  <p>{{ envio.direccion.pais }}</p>
+                </div>
+
+                <div>
+                  <h4>Productos a enviar</h4>
+                  <ul class="shipment-products">
+                    <li v-for="producto in envio.productos" :key="`${envio.id}-${producto.nombre}`">
+                      {{ producto.cantidad }} x {{ producto.nombre }}
+                    </li>
+                  </ul>
+                  <p class="shipment-total">Total: {{ formatPrice(envio.total) }}</p>
+                </div>
+              </div>
+
+              <footer class="shipment-actions">
+                <button
+                  v-if="!['ENVIADO', 'ENTREGADO', 'RECOGIDO', 'COMPLETADO'].includes(envio.estado.toUpperCase())"
+                  @click="marcarPedidoEnviado(envio.id)"
+                  class="btn-primary"
+                >
+                  Marcar como enviado
+                </button>
+              </footer>
+            </article>
+          </section>
+
+          <section class="shipment-group">
+            <h2>Recogida en tienda</h2>
+            <div v-if="recogidasTiendaAdmin.length === 0" class="empty-reservas">
+              <p>No hay pedidos pendientes para recogida en tienda.</p>
+            </div>
+            <article v-for="envio in recogidasTiendaAdmin" :key="`store-${envio.id}`" class="shipment-card">
+              <header class="shipment-header">
+                <div>
+                  <h3>Pedido #{{ envio.id }}</h3>
+                  <p class="shipment-date">{{ formatDate(envio.fechaPedido) }}</p>
+                </div>
+                <span :class="['status-badge', envio.estadoBadge]">{{ envio.estado }}</span>
+              </header>
+
+              <div class="shipment-grid">
+                <div>
+                  <h4>Cliente</h4>
+                  <p>{{ envio.destinatario }}</p>
+                  <p>{{ envio.email }}</p>
+                  <p>{{ envio.telefono }}</p>
+                </div>
+
+                <div>
+                  <h4>Punto de recogida</h4>
+                  <p>Calle Ejemplo 123, Madrid</p>
+                  <p>Lun-Vie: 10:00-20:00</p>
+                  <p>Sab: 10:00-14:00</p>
+                </div>
+
+                <div>
+                  <h4>Productos para recoger</h4>
+                  <ul class="shipment-products">
+                    <li v-for="producto in envio.productos" :key="`${envio.id}-${producto.nombre}`">
+                      {{ producto.cantidad }} x {{ producto.nombre }}
+                    </li>
+                  </ul>
+                  <p class="shipment-total">Total: {{ formatPrice(envio.total) }}</p>
+                </div>
+              </div>
+
+              <footer class="shipment-actions">
+                <button
+                  v-if="!['CANCELADO', 'ENTREGADO', 'RECOGIDO', 'COMPLETADO'].includes(envio.estado.toUpperCase())"
+                  @click="marcarPedidoRecogido(envio.id)"
+                  class="btn-primary"
+                >
+                  Marcar como recogido
+                </button>
+              </footer>
+            </article>
+          </section>
+        </div>
+      </div>
+
+      <!-- Carrusel Home -->
+      <div v-if="activeTab === 'Carrusel Home'" class="admin-section">
+        <h1>Gestion del Carrusel Home</h1>
+        <p class="carousel-admin-subtitle">
+          Sube o cambia las imagenes del carrusel principal de la home. Estos cambios se guardan en la base de datos y son visibles para todos los visitantes.
+        </p>
+        <div class="carousel-admin-help">
+          <strong>Proporcion recomendada:</strong> 2.74:1
+          <span>Ideal: 1920 x 700 px. Minimo recomendado: 1600 x 584 px.</span>
+          <span>Manten el texto y los elementos importantes centrados para que se vean bien en desktop y movil.</span>
+        </div>
+
+        <div class="carousel-admin-grid">
+          <article v-for="(slide, index) in carouselSlides" :key="`carousel-slide-${index}`" class="carousel-admin-card">
+            <h3>Slide {{ index + 1 }}</h3>
+
+            <div class="carousel-admin-preview-wrap">
+              <img
+                v-if="slide"
+                :src="slide"
+                :alt="`Slide ${index + 1}`"
+                class="carousel-admin-preview"
+              />
+              <div v-else class="carousel-admin-empty">Sin imagen configurada</div>
+            </div>
+
+            <div class="carousel-admin-actions">
+              <input
+                type="file"
+                accept="image/*"
+                @change="handleCarouselImageUpload($event, index)"
+                :disabled="carouselUploadingIndex === index"
+              />
+              <button
+                type="button"
+                class="btn-cancel"
+                @click="clearCarouselSlide(index)"
+                :disabled="carouselUploadingIndex === index"
+              >
+                Limpiar slide
+              </button>
+            </div>
+
+            <p v-if="carouselUploadingIndex === index" class="uploading-text">Subiendo imagen...</p>
+          </article>
+        </div>
+
+        <div class="carousel-admin-footer">
+          <button class="save-btn" @click="saveCarouselConfig" :disabled="carouselUploadingIndex !== null">
+            Guardar carrusel
+          </button>
+        </div>
+      </div>
+
       <!-- Reportes -->
       <div v-if="activeTab === 'Reportes'" class="admin-section">
         <h1>📊 Generador de Reportes</h1>
@@ -525,7 +733,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'vue-router'
 import api from '@/api/axios'
@@ -600,8 +808,55 @@ interface ReservaAdmin {
   notas?: string
 }
 
+interface EnvioAdmin {
+  id: number
+  tipoEntrega: 'domicilio' | 'tienda'
+  estado: string
+  estadoBadge: 'pendiente' | 'disponible' | 'recogido' | 'cancelada'
+  fechaPedido: string
+  destinatario: string
+  email: string
+  telefono: string
+  direccion: {
+    calle: string
+    ciudad: string
+    codigoPostal: string
+    pais: string
+  }
+  productos: Array<{
+    nombre: string
+    cantidad: number
+  }>
+  total: number
+}
+
 const authStore = useAuthStore()
 const router = useRouter()
+
+const resolveBackendImageUrl = (image?: string): string => {
+  if (!image) return ''
+
+  if (
+    image.startsWith('http://') ||
+    image.startsWith('https://') ||
+    image.startsWith('data:') ||
+    image.startsWith('blob:')
+  ) {
+    return image
+  }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+
+  if (image.startsWith('/')) {
+    return `${baseUrl}${image}`
+  }
+
+  if (image.startsWith('uploads/')) {
+    return `${baseUrl}/${image}`
+  }
+
+  return image
+}
 
 // Verificar si es admin
 const isAdmin = computed(() => {
@@ -613,8 +868,8 @@ if (!isAdmin.value) {
   router.push('/')
 }
 
-const activeTab = ref('Estadísticas')
-const tabs = ['Reservas', 'Productos', 'Eventos', 'Descuentos', 'Reportes']
+const activeTab = ref('Reservas')
+const tabs = ['Reservas', 'Envios', 'Carrusel Home', 'Productos', 'Eventos', 'Descuentos', 'Reportes']
 
 // Reservas Admin
 const activeReservaFilter = ref('todas')
@@ -639,6 +894,40 @@ const reservasActivas = computed(() => {
   return reservasAdmin.value.filter(r => r.estado === 'pendiente' || r.estado === 'disponible').length
 })
 
+const enviosAdmin = ref<EnvioAdmin[]>([])
+const carouselSlides = ref<string[]>(['', '', ''])
+const carouselUploadingIndex = ref<number | null>(null)
+const estadosFinalizadosEnvio = ['CANCELADO', 'ENTREGADO', 'RECOGIDO', 'COMPLETADO']
+
+const enviosDomicilioAdmin = computed(() => {
+  return enviosAdmin.value.filter((envio) => envio.tipoEntrega === 'domicilio')
+})
+
+const recogidasTiendaAdmin = computed(() => {
+  return enviosAdmin.value.filter((envio) => envio.tipoEntrega === 'tienda')
+})
+
+const enviosPendientesCount = computed(() => {
+  return enviosAdmin.value.filter((envio) => {
+    const estado = envio.estado.toUpperCase()
+    return !estadosFinalizadosEnvio.includes(estado)
+  }).length
+})
+
+const enviosDomicilioPendientesCount = computed(() => {
+  return enviosDomicilioAdmin.value.filter((envio) => {
+    const estado = envio.estado.toUpperCase()
+    return !estadosFinalizadosEnvio.includes(estado)
+  }).length
+})
+
+const recogidasTiendaPendientesCount = computed(() => {
+  return recogidasTiendaAdmin.value.filter((envio) => {
+    const estado = envio.estado.toUpperCase()
+    return !estadosFinalizadosEnvio.includes(estado)
+  }).length
+})
+
 // Estadísticas desde la base de datos
 const loadProductos = async () => {
   try {
@@ -651,7 +940,9 @@ const loadProductos = async () => {
       stock: p.stock || 0,
       discount: p.discount || 0,
       description: p.description || '',
-      image: p.image && p.image.trim() ? p.image : 'https://via.placeholder.com/150?text=Sin+imagen'
+      image: p.image && p.image.trim()
+        ? resolveBackendImageUrl(p.image)
+        : 'https://via.placeholder.com/150?text=Sin+imagen'
     }))
     console.log('✅ Productos cargados:', products.value.length)
     console.log('📦 Primeros productos:', products.value.slice(0, 3))
@@ -757,12 +1048,156 @@ const loadReservas = async () => {
   }
 }
 
+const loadEnvios = async (): Promise<void> => {
+  try {
+    const response = await api.get('/pedidos')
+    const pedidos = Array.isArray(response.data) ? response.data : []
+
+    enviosAdmin.value = pedidos
+      .filter((pedido: any) => {
+        const tieneItems = Array.isArray(pedido?.items) && pedido.items.length > 0
+        const estado = (pedido?.estado || '').toUpperCase()
+        const esFinalizado = estadosFinalizadosEnvio.includes(estado)
+        return tieneItems && !esFinalizado
+      })
+      .map((pedido: any) => {
+        const estadoUpper = String(pedido?.estado || 'PENDIENTE').toUpperCase()
+        const metodoEntregaRaw = String(pedido?.metodoEntrega || '').trim().toLowerCase()
+        const tieneDireccion = Boolean(
+          pedido?.usuarioCalle && pedido?.usuarioCiudad && pedido?.usuarioCodigoPostal && pedido?.usuarioPais
+        )
+        const tipoEntrega: EnvioAdmin['tipoEntrega'] = metodoEntregaRaw === 'tienda'
+          ? 'tienda'
+          : metodoEntregaRaw === 'envio'
+            ? 'domicilio'
+            : (tieneDireccion ? 'domicilio' : 'tienda')
+
+        let estadoBadge: EnvioAdmin['estadoBadge'] = 'pendiente'
+        if (['ENVIADO', 'DISPONIBLE'].includes(estadoUpper)) {
+          estadoBadge = 'disponible'
+        } else if (['ENTREGADO', 'RECOGIDO', 'COMPLETADO'].includes(estadoUpper)) {
+          estadoBadge = 'recogido'
+        } else if (estadoUpper === 'CANCELADO') {
+          estadoBadge = 'cancelada'
+        }
+
+        return {
+          id: pedido.id,
+          tipoEntrega,
+          estado: pedido.estado || 'PENDIENTE',
+          estadoBadge,
+          fechaPedido: pedido.fechaPedido,
+          destinatario: pedido.usuarioNombre || pedido.usuarioUid || 'Cliente',
+          email: pedido.usuarioEmail || 'Sin email',
+          telefono: pedido.usuarioTelefono || 'No informado',
+          direccion: {
+            calle: pedido.usuarioCalle || 'No aplica (recogida en tienda)',
+            ciudad: pedido.usuarioCiudad || '-',
+            codigoPostal: pedido.usuarioCodigoPostal || '-',
+            pais: pedido.usuarioPais || '-',
+          },
+          productos: (pedido.items || []).map((item: any) => ({
+            nombre: item?.nombre || 'Producto',
+            cantidad: item?.cantidad || 1,
+          })),
+          total: Number(pedido.total || 0),
+        } as EnvioAdmin
+      })
+  } catch (error) {
+    console.error('Error al cargar envios:', error)
+    enviosAdmin.value = []
+  }
+}
+
 onMounted(() => {
   loadProductos()
   loadEventos()
   loadReservas()
+  loadEnvios()
   loadDescuentos()
+  void loadCarouselConfig()
 })
+
+const loadCarouselConfig = async (): Promise<void> => {
+  const defaults = ['', '', '']
+  try {
+    const response = await api.get('/api/home-carousel')
+    const apiSlides = response.data?.slides
+    if (!Array.isArray(apiSlides)) {
+      carouselSlides.value = defaults
+      return
+    }
+    carouselSlides.value = defaults.map((_, idx) => {
+      const value = apiSlides[idx]
+      return typeof value === 'string' ? value : ''
+    })
+  } catch (error) {
+    console.error('Error al cargar la configuracion del carrusel:', error)
+    carouselSlides.value = defaults
+  }
+}
+
+const saveCarouselConfig = async (): Promise<void> => {
+  try {
+    const payload = { slides: carouselSlides.value }
+    const response = await api.put('/api/home-carousel', payload)
+    const apiSlides = response.data?.slides
+    if (Array.isArray(apiSlides)) {
+      carouselSlides.value = ['', '', ''].map((_, idx) => {
+        const value = apiSlides[idx]
+        return typeof value === 'string' ? value : ''
+      })
+    }
+    alert('Carrusel de home actualizado correctamente')
+  } catch (error) {
+    console.error('Error al guardar configuracion del carrusel:', error)
+    alert('No se pudo guardar la configuracion del carrusel')
+  }
+}
+
+const clearCarouselSlide = (index: number): void => {
+  carouselSlides.value[index] = ''
+}
+
+const handleCarouselImageUpload = async (event: any, index: number): Promise<void> => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('Por favor selecciona un archivo de imagen valido')
+    input.value = ''
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('La imagen debe tener un tamaño maximo de 5MB')
+    input.value = ''
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+  carouselUploadingIndex.value = index
+
+  try {
+    const response = await api.post('/api/upload/image', formData)
+    if (!response.data?.url) {
+      throw new Error('No se recibio URL de imagen')
+    }
+    carouselSlides.value[index] = resolveBackendImageUrl(response.data.url)
+  } catch (error: any) {
+    console.error('Error al subir imagen del carrusel:', error)
+    const errorMsg = error.response?.data?.message || error.message || 'Error desconocido'
+    alert(`No se pudo subir la imagen: ${errorMsg}`)
+  } finally {
+    carouselUploadingIndex.value = null
+    input.value = ''
+  }
+}
 
 const getReservaCountByStatus = (status: string): number => {
   if (status === 'todas') return reservasAdmin.value.length
@@ -867,9 +1302,58 @@ const cancelarReservaAdmin = async (reserva: ReservaAdmin): Promise<void> => {
   }
 }
 
+const marcarPedidoEnviado = async (pedidoId: number): Promise<void> => {
+  if (!confirm(`Marcar pedido #${pedidoId} como enviado?`)) {
+    return
+  }
+
+  try {
+    await api.put(`/pedidos/${pedidoId}/estado`, {
+      estado: 'ENVIADO',
+    })
+    await loadEnvios()
+    alert(`Pedido #${pedidoId} marcado como enviado`)
+  } catch (error) {
+    console.error('Error al actualizar estado del envio:', error)
+    alert('No se pudo actualizar el estado del envio')
+  }
+}
+
+const marcarPedidoRecogido = async (pedidoId: number): Promise<void> => {
+  if (!confirm(`Marcar pedido #${pedidoId} como recogido?`)) {
+    return
+  }
+
+  try {
+    await api.put(`/pedidos/${pedidoId}/estado`, {
+      estado: 'RECOGIDO',
+    })
+    await loadEnvios()
+    alert(`Pedido #${pedidoId} marcado como recogido`)
+  } catch (error) {
+    console.error('Error al actualizar estado de recogida:', error)
+    alert('No se pudo actualizar el estado de recogida')
+  }
+}
+
 // Productos
 const showProductForm = ref(false)
 const editingProduct = ref<Product | null>(null)
+const productCategories = ['TCG', 'Manga', 'Comics', 'Figuras', 'Juegos de mesa', 'Accesorios', 'Merchandising']
+const productSubcategoriesByCategory: Record<string, string[]> = {
+  TCG: ['Yu-Gi-Oh', 'Magic', 'Pokemon', 'One Piece', 'Digimon', 'Dragon Ball'],
+  Manga: ['Shonen', 'Seinen', 'Shojo', 'Josei', 'Kodomo'],
+  Comics: ['Marvel', 'DC', 'Image', 'Dark Horse', 'Independientes'],
+  Figuras: ['Nendoroid', 'Funko Pop', 'Scale Figures', 'Estatuas', 'Bustos'],
+  'Juegos de mesa': ['Estrategia', 'Familiar', 'Party', 'Cooperativos', 'Rol'],
+  Accesorios: ['Fundas', 'Deck Box', 'Playmat', 'Dados', 'Carpetas'],
+  Merchandising: ['Ropa', 'Pósters', 'Llaveros', 'Tazas', 'Otros']
+}
+
+const availableProductSubcategories = computed(() => {
+  return productSubcategoriesByCategory[productForm.value.category] || []
+})
+
 const productForm = ref({
   name: '',
   category: '',
@@ -887,6 +1371,16 @@ const productForm = ref({
 })
 const imagePreview = ref<string | null>(null)
 const uploadingImage = ref(false)
+
+watch(
+  () => productForm.value.category,
+  (newCategory) => {
+    const options = productSubcategoriesByCategory[newCategory] || []
+    if (options.length > 0 && productForm.value.subcategory && !options.includes(productForm.value.subcategory)) {
+      productForm.value.subcategory = ''
+    }
+  }
+)
 
 const products = ref<Product[]>([])
 
@@ -1086,9 +1580,10 @@ const handleImageUpload = async (event: any): Promise<void> => {
     console.log('✅ Respuesta del servidor:', response.data)
     
     if (response.data?.url) {
-      productForm.value.image = response.data.url
-      imagePreview.value = response.data.url
-      console.log('✅ Imagen subida correctamente:', response.data.url)
+      const normalizedUrl = resolveBackendImageUrl(response.data.url)
+      productForm.value.image = normalizedUrl
+      imagePreview.value = normalizedUrl
+      console.log('✅ Imagen subida correctamente:', normalizedUrl)
     } else {
       console.error('❌ No hay URL en la respuesta:', response.data)
       alert('❌ Error: El servidor no devolvió la URL de la imagen')
@@ -1184,6 +1679,15 @@ const openDiscountModal = () => {
 
 // Editar descuento
 const editDiscount = (discount: any) => {
+  // Convertir fechas ISO 8601 a formato YYYY-MM-DD para el input date
+  const convertToDateFormat = (dateString: string): string => {
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   discountForm.value = {
     id: discount.id,
     code: discount.code,
@@ -1191,8 +1695,8 @@ const editDiscount = (discount: any) => {
     value: discount.value,
     scope: discount.scope,
     scopeValue: discount.scopeValue || '',
-    startDate: discount.startDate,
-    endDate: discount.endDate
+    startDate: convertToDateFormat(discount.startDate),
+    endDate: convertToDateFormat(discount.endDate)
   }
   showDiscountModal.value = true
 }
@@ -1241,13 +1745,28 @@ const saveDiscount = async () => {
   }
 
   try {
+    const normalizedCode = discountForm.value.code.trim().toUpperCase()
+
+    // Convertir fechas de YYYY-MM-DD a formato LocalDateTime ISO 8601
+    const startDateTime = new Date(discountForm.value.startDate)
+    startDateTime.setHours(0, 0, 0, 0)
+    const endDateTime = new Date(discountForm.value.endDate)
+    endDateTime.setHours(23, 59, 59, 999)
+
+    const payload = {
+      ...discountForm.value,
+      code: normalizedCode,
+      startDate: startDateTime.toISOString(),
+      endDate: endDateTime.toISOString()
+    }
+
     if (discountForm.value.id) {
       // Actualizar
-      await api.put(`/api/discounts/${discountForm.value.id}`, discountForm.value)
+      await api.put(`/api/discounts/${discountForm.value.id}`, payload)
       alert('✅ Código de descuento actualizado correctamente')
     } else {
       // Crear
-      await api.post('/api/discounts', discountForm.value)
+      await api.post('/api/discounts', payload)
       alert('✅ Código de descuento creado correctamente')
     }
     
@@ -1255,7 +1774,8 @@ const saveDiscount = async () => {
     await loadDescuentos()
   } catch (error: any) {
     console.error('Error al guardar descuento:', error)
-    alert('❌ Error al guardar el código de descuento: ' + (error.response?.data?.message || 'Error desconocido'))
+    const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Error desconocido'
+    alert('❌ Error al guardar el código de descuento: ' + errorMsg)
   }
 }
 
@@ -1702,6 +2222,80 @@ const exportProductsToExcel = async () => {
   padding: 60px 20px;
   color: #6b7280;
   font-size: 16px;
+}
+
+.carousel-admin-subtitle {
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.carousel-admin-help {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #7f1d1d;
+  font-size: 14px;
+}
+
+.carousel-admin-help strong {
+  color: #991b1b;
+}
+
+.carousel-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.carousel-admin-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.carousel-admin-card h3 {
+  margin-bottom: 10px;
+  color: #1f2937;
+}
+
+.carousel-admin-preview-wrap {
+  height: 160px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.carousel-admin-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.carousel-admin-empty {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.carousel-admin-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.carousel-admin-footer {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* Estilos existentes */
@@ -2220,6 +2814,14 @@ const exportProductsToExcel = async () => {
   .reserva-admin-actions button {
     width: 100%;
   }
+
+  .carousel-admin-footer {
+    justify-content: stretch;
+  }
+
+  .carousel-admin-footer .save-btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
@@ -2421,29 +3023,33 @@ const exportProductsToExcel = async () => {
 .discount-actions-admin {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .action-btn-admin {
-  width: 36px;
-  height: 36px;
+  min-height: 36px;
+  padding: 8px 12px;
   border: 2px solid #e5e7eb;
   background: white;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
 .action-btn-admin:hover {
-  transform: scale(1.1);
+  transform: translateY(-1px);
 }
 
-.action-btn-admin.edit-btn:hover {
+.action-btn-admin.discount-edit-btn:hover {
   border-color: #3b82f6;
   background: #eff6ff;
 }
 
-.action-btn-admin.delete-btn:hover {
+.action-btn-admin.discount-delete-btn:hover {
   border-color: #dc2626;
   background: #fef2f2;
 }
@@ -2686,6 +3292,105 @@ const exportProductsToExcel = async () => {
 }
 
 /* Reportes */
+.shipments-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.shipment-kpi {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #dc2626;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.kpi-label {
+  display: block;
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  color: #111827;
+  font-size: 26px;
+}
+
+.shipments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.shipment-group h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  color: #111827;
+}
+
+.shipment-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.shipment-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.shipment-header h3 {
+  margin: 0;
+}
+
+.shipment-date {
+  color: #6b7280;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.shipment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.shipment-grid h4 {
+  margin-bottom: 8px;
+  color: #111827;
+}
+
+.shipment-grid p {
+  margin: 3px 0;
+  color: #374151;
+}
+
+.shipment-products {
+  padding-left: 18px;
+  margin: 0 0 8px 0;
+}
+
+.shipment-products li {
+  margin: 4px 0;
+}
+
+.shipment-total {
+  font-weight: 700;
+}
+
+.shipment-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
 .reports-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));

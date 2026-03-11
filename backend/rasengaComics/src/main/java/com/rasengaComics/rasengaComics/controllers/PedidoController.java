@@ -106,8 +106,13 @@ public class PedidoController {
         r.setUsuarioNombre(p.getUsuario().getNombre());
         r.setUsuarioEmail(p.getUsuario().getEmail());
         r.setUsuarioTelefono(p.getUsuario().getTelefono());
+        r.setUsuarioCalle(p.getUsuario().getCalle());
+        r.setUsuarioCiudad(p.getUsuario().getCiudad());
+        r.setUsuarioCodigoPostal(p.getUsuario().getCodigoPostal());
+        r.setUsuarioPais(p.getUsuario().getPais());
         r.setFechaPedido(p.getFechaPedido());
         r.setEstado(p.getEstado());
+        r.setMetodoEntrega(p.getMetodoEntrega());
         r.setCantidadDetalles(p.getDetalles() != null ? p.getDetalles().size() : 0);
         r.setTotal(calcularTotal(p));
         r.setItems(mapItems(p.getDetalles(), p.getEstado()));
@@ -132,12 +137,16 @@ public class PedidoController {
         }
         return detalles.stream().map(detalle -> {
             PedidoResponse.Item item = new PedidoResponse.Item();
-            item.setProductoId(detalle.getProducto().getId());
+            Long sourceProductId = detalle.getProducto().getSourceProductId();
+            item.setProductoId(sourceProductId != null ? sourceProductId : detalle.getProducto().getId());
             item.setNombre(detalle.getProducto().getNombre());
             item.setPrecio(detalle.getPrecioUnitario());
             item.setCantidad(detalle.getCantidad());
 
-            Optional<Product> productInfo = productRepository.findById(detalle.getProducto().getId());
+            Optional<Product> productInfo = Optional.empty();
+            if (sourceProductId != null) {
+                productInfo = productRepository.findById(sourceProductId);
+            }
             if (productInfo.isEmpty()) {
                 productInfo = productRepository.findByName(detalle.getProducto().getNombre());
             }

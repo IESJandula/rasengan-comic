@@ -10,7 +10,12 @@ public class PedidoResponse {
     private String usuarioNombre;
     private String usuarioEmail;
     private String usuarioTelefono;
+    private String usuarioCalle;
+    private String usuarioCiudad;
+    private String usuarioCodigoPostal;
+    private String usuarioPais;
     private String estado;
+    private String metodoEntrega;
     private Double total;
     private LocalDateTime fechaPedido;
     private LocalDateTime fechaCreacion;
@@ -34,8 +39,23 @@ public class PedidoResponse {
     public String getUsuarioTelefono() { return usuarioTelefono; }
     public void setUsuarioTelefono(String usuarioTelefono) { this.usuarioTelefono = usuarioTelefono; }
 
+    public String getUsuarioCalle() { return usuarioCalle; }
+    public void setUsuarioCalle(String usuarioCalle) { this.usuarioCalle = usuarioCalle; }
+
+    public String getUsuarioCiudad() { return usuarioCiudad; }
+    public void setUsuarioCiudad(String usuarioCiudad) { this.usuarioCiudad = usuarioCiudad; }
+
+    public String getUsuarioCodigoPostal() { return usuarioCodigoPostal; }
+    public void setUsuarioCodigoPostal(String usuarioCodigoPostal) { this.usuarioCodigoPostal = usuarioCodigoPostal; }
+
+    public String getUsuarioPais() { return usuarioPais; }
+    public void setUsuarioPais(String usuarioPais) { this.usuarioPais = usuarioPais; }
+
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
+
+    public String getMetodoEntrega() { return metodoEntrega; }
+    public void setMetodoEntrega(String metodoEntrega) { this.metodoEntrega = metodoEntrega; }
 
     public Double getTotal() { return total; }
     public void setTotal(Double total) { this.total = total; }

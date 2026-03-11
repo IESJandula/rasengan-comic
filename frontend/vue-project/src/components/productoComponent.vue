@@ -24,8 +24,13 @@
             :src="image"
             :alt="product.name"
             @click="currentImage = image"
+            @keydown.enter="currentImage = image"
+            @keydown.space.prevent="currentImage = image"
             :class="{ active: currentImage === image }"
             class="thumbnail"
+            tabindex="0"
+            role="button"
+            :aria-label="`Seleccionar imagen ${index + 1} de ${product.name}`"
           />
         </div>
       </div>
@@ -48,43 +53,14 @@
           </div>
         </div>
 
-        <!-- Descripción -->
-        <div class="description">
-          <h3>Descripción</h3>
-          <p>{{ product.description }}</p>
-        </div>
-
-        <!-- Especificaciones -->
-        <div class="specifications">
-          <h3>Especificaciones</h3>
-          <div class="specs-grid">
-            <div class="spec-item">
-              <span class="spec-label">Autor:</span>
-              <span class="spec-value">{{ product.author }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-label">Editorial:</span>
-              <span class="spec-value">{{ product.publisher }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-label">Año:</span>
-              <span class="spec-value">{{ product.year }}</span>
-            </div>
-            <div class="spec-item">
-              <span class="spec-label">Páginas:</span>
-              <span class="spec-value">{{ product.pages }}</span>
-            </div>
-          </div>
-        </div>
-
         <!-- Cantidad y botones -->
         <div class="actions">
           <div class="quantity-selector">
             <label for="quantity">Cantidad:</label>
             <div class="quantity-controls">
-              <button @click="quantity > 1 ? quantity-- : null" class="qty-btn" :disabled="product.stock === 0">-</button>
+              <button @click="quantity > 1 ? quantity-- : null" class="qty-btn" :disabled="product.stock === 0" aria-label="Disminuir cantidad">-</button>
               <input v-model.number="quantity" type="number" min="1" :max="product.stock" id="quantity" :disabled="product.stock === 0" />
-              <button @click="quantity < product.stock ? quantity++ : null" class="qty-btn" :disabled="product.stock === 0 || quantity >= product.stock">+</button>
+              <button @click="quantity < product.stock ? quantity++ : null" class="qty-btn" :disabled="product.stock === 0 || quantity >= product.stock" aria-label="Aumentar cantidad">+</button>
             </div>
           </div>
 
@@ -101,7 +77,7 @@
           <button
             @click="addToCart"
             :disabled="!product.isReserve && product.stock === 0"
-            class="add-to-cart-btn"
+            :class="['add-to-cart-btn', { 'reserve-btn': product.isReserve }]"
           >
             🛒 {{ product.isReserve ? 'Reservar' : (product.stock > 0 ? 'Agregar al Carrito' : 'Agotado') }}
           </button>
@@ -150,7 +126,17 @@
     <div v-if="relatedProducts.length > 0" class="related-products">
       <h2>Productos relacionados</h2>
       <div class="products-grid">
-        <div v-for="relProduct in relatedProducts" :key="relProduct.id" class="product-card" @click="viewProduct(relProduct.id)">
+        <div
+          v-for="relProduct in relatedProducts"
+          :key="relProduct.id"
+          class="product-card"
+          @click="viewProduct(relProduct.id)"
+          @keydown.enter="viewProduct(relProduct.id)"
+          @keydown.space.prevent="viewProduct(relProduct.id)"
+          tabindex="0"
+          role="button"
+          :aria-label="`Ver producto relacionado ${relProduct.name}`"
+        >
           <img :src="relProduct.image" :alt="relProduct.name" />
           <h4>{{ relProduct.name }}</h4>
           <p class="price">{{ relProduct.price }}€</p>
@@ -164,6 +150,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCartStore } from '@/stores/cartStore';
+import { useSeo, seoJsonLd } from '@/composables/useSeo';
 import api from '../api/axios';
 
 const router = useRouter();
@@ -188,6 +175,16 @@ const resolveImageUrl = (image?: string): string => {
   ) {
     return image;
   }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '');
+  if (image.startsWith('/')) {
+    return `${baseUrl}${image}`;
+  }
+
+  if (image.startsWith('uploads/')) {
+    return `${baseUrl}/${image}`;
+  }
+
   return new URL(`../assets/delete_inicio/${image}`, import.meta.url).href;
 };
 
@@ -205,15 +202,12 @@ interface Product {
   price: number;
   originalPrice?: number;
   discount?: number;
-  rating: number;
-  reviews: number;
   available: boolean;
   stock: number;
+  isReserve?: boolean;
   description: string;
   author: string;
   publisher: string;
-  year: number;
-  pages: number;
   images: string[];
 }
 
@@ -224,15 +218,11 @@ const product = ref<Product>({
   price: 12.99,
   originalPrice: 14.99,
   discount: 10,
-  rating: 5,
-  reviews: 145,
   available: true,
   stock: 0,
   description: 'El volumen 100 de One Piece es un hito histórico en la serie. Esta edición especial incluye extras exclusivos, póster desplegable y cubierta holográfica. Una debe para cualquier fan de One Piece.',
   author: 'Eiichiro Oda',
   publisher: 'Planeta Manga',
-  year: 2024,
-  pages: 192,
   images: [
     'https://images.unsplash.com/photo-1612036782180-69db8e541e1f?w=600&h=800&fit=crop',
     'https://images.unsplash.com/photo-1594743315886-a18d195ce546?w=600&h=800&fit=crop',
@@ -254,8 +244,30 @@ const loadProduct = async () => {
     };
     
     if (product.value.images.length > 0) {
-      currentImage.value = product.value.images[0];
+      currentImage.value = product.value.images[0] || currentImage.value;
     }
+
+    // SEO dinámico para el producto
+    useSeo({
+      title: product.value.name,
+      description: product.value.description
+        ? product.value.description.slice(0, 160)
+        : `Compra ${product.value.name} en Rasengan Comics. ${product.value.category}. Envíos a toda España.`,
+      image: product.value.images[0] || undefined,
+      url: `https://rasengacomics.com/producto/${product.value.id}`,
+      type: 'product',
+      structuredData: seoJsonLd.product({
+        id: product.value.id,
+        name: product.value.name,
+        description: product.value.description,
+        price: product.value.price,
+        image: product.value.images[0] || '',
+        category: product.value.category,
+        author: product.value.author,
+        publisher: product.value.publisher,
+        available: product.value.available,
+      }),
+    });
     
     // Cargar productos relacionados de la misma categoría
     await loadRelatedProducts();
@@ -298,27 +310,25 @@ watch(() => route.params.id, () => {
 });
 
 const addToCart = () => {
-  if (product.value.isReserve) {
-    router.push('/perfil?tab=reservas')
-  } else {
-    cartStore.addToCart({
-      id: product.value.id,
-      name: product.value.name,
-      category: product.value.category,
-      price: product.value.price,
-      image: product.value.images[0],
-      stock: product.value.stock
-    }, quantity.value);
-    
-    // Mostrar notificación toast
-    toastMessage.value = `${quantity.value} unidad(es) de ${product.value.name}`;
-    showToast.value = true;
-    
-    // Ocultar después de 3 segundos
-    setTimeout(() => {
-      showToast.value = false;
-    }, 3000);
-  }
+  const effectiveStock = product.value.isReserve ? 999 : product.value.stock
+
+  cartStore.addToCart({
+    id: product.value.id,
+    name: product.value.name,
+    category: product.value.category,
+    price: product.value.price,
+    image: product.value.images[0] || currentImage.value,
+    stock: effectiveStock
+  }, quantity.value);
+  
+  // Mostrar notificación toast
+  toastMessage.value = `${quantity.value} unidad(es) de ${product.value.name}`;
+  showToast.value = true;
+  
+  // Ocultar después de 3 segundos
+  setTimeout(() => {
+    showToast.value = false;
+  }, 3000);
 };
 
 const viewProduct = (productId: number) => {
@@ -514,47 +524,6 @@ const viewProduct = (productId: number) => {
   font-size: 14px;
 }
 
-.description h3,
-.specifications h3 {
-  font-size: 18px;
-  font-weight: bold;
-  color: #1f2937;
-  margin: 0 0 10px 0;
-}
-
-.description p {
-  color: #6b7280;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.specifications {
-  background-color: #f9fafb;
-  padding: 15px;
-  border-radius: 8px;
-}
-
-.specs-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-
-.spec-item {
-  display: flex;
-  gap: 8px;
-}
-
-.spec-label {
-  font-weight: 600;
-  color: #374151;
-  min-width: 80px;
-}
-
-.spec-value {
-  color: #6b7280;
-}
-
 .actions {
   display: flex;
   flex-direction: column;
@@ -616,6 +585,14 @@ const viewProduct = (productId: number) => {
 .add-to-cart-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
+}
+
+.add-to-cart-btn.reserve-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.add-to-cart-btn.reserve-btn:hover:not(:disabled) {
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
 }
 
 .add-to-cart-btn:disabled {
@@ -736,6 +713,11 @@ const viewProduct = (productId: number) => {
 .product-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.product-card:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .product-card img {

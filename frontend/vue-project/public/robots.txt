@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /perfil
+Disallow: /carrito
+Disallow: /reservas
+Disallow: /mensaje
+
+# Sitemap
+Sitemap: https://rasengacomics.com/sitemap.xml

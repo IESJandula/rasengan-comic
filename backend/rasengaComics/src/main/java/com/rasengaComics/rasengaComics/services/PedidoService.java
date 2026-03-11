@@ -98,6 +98,7 @@ public class PedidoService {
     @Transactional
     public Pedido crearPedidoPagado(String usuarioUid,
                                     List<com.rasengaComics.rasengaComics.dto.request.PedidoRequest.Item> items,
+                                    String metodoEntrega,
                                     String stripeSessionId,
                                     String stripePaymentIntentId) {
         logger.info("【CREAR PEDIDO PAGADO】 usuarioUid: {}, items: {}, sessionId: {}", usuarioUid, items.size(), stripeSessionId);
@@ -121,6 +122,7 @@ public class PedidoService {
         pedido.setUsuario(usuario);
         pedido.setFechaPedido(LocalDateTime.now());
         pedido.setEstado("PAGADO");
+        pedido.setMetodoEntrega(normalizarMetodoEntrega(metodoEntrega));
         pedido.setStripeSessionId(stripeSessionId);
         pedido.setStripePaymentIntentId(stripePaymentIntentId);
 
@@ -159,27 +161,34 @@ public class PedidoService {
                 productRepository.save(product);
                 logger.info("【STOCK ACTUALIZADO】 Nuevo stock: {}", product.getStock());
                 
-                // Buscar o crear el producto en tabla productos usando el MISMO ID de products.
-                // No actualizamos registros existentes aquí para evitar conflictos de concurrencia
-                // durante el procesamiento de webhooks de Stripe.
-                Optional<Producto> optProducto = productoRepository.findById(item.getProductoId());
+                // Relación estable entre tabla products y tabla productos usando sourceProductId.
+                Optional<Producto> optProducto = productoRepository.findBySourceProductId(product.getId());
                 if (optProducto.isEmpty()) {
                     optProducto = productoRepository.findByNombre(product.getName());
                 }
+
                 Producto producto;
                 if (optProducto.isPresent()) {
                     producto = optProducto.get();
-                    logger.info("【PRODUCTO EXISTE EN PRODUCTOS】 ID: {}, Nombre: {}", producto.getId(), producto.getNombre());
-                } else {
-                    // Crear producto en tabla productos desde products si no existe.
-                    // Dejar que la PK sea autogenerada evita conflictos entre IDs de tablas distintas.
-                    producto = new Producto();
+                    if (producto.getSourceProductId() == null) {
+                        producto.setSourceProductId(product.getId());
+                    }
                     producto.setNombre(product.getName());
                     producto.setDescripcion(product.getCategory() + (product.getSubcategory() != null ? " - " + product.getSubcategory() : ""));
                     producto.setPrecio(product.getPrice());
                     producto.setStock(product.getStock());
                     producto = productoRepository.save(producto);
-                    logger.info("【PRODUCTO CREADO EN TABLA productos】 ID: {}, Nombre: {}", producto.getId(), producto.getNombre());
+                    logger.info("【PRODUCTO EXISTE EN PRODUCTOS】 ID: {}, sourceProductId: {}, Nombre: {}", producto.getId(), producto.getSourceProductId(), producto.getNombre());
+                } else {
+                    // Crear producto en tabla productos vinculado al ID real de products.
+                    producto = new Producto();
+                    producto.setSourceProductId(product.getId());
+                    producto.setNombre(product.getName());
+                    producto.setDescripcion(product.getCategory() + (product.getSubcategory() != null ? " - " + product.getSubcategory() : ""));
+                    producto.setPrecio(product.getPrice());
+                    producto.setStock(product.getStock());
+                    producto = productoRepository.save(producto);
+                    logger.info("【PRODUCTO CREADO EN TABLA productos】 ID: {}, sourceProductId: {}, Nombre: {}", producto.getId(), producto.getSourceProductId(), producto.getNombre());
                 }
                 
                 DetallePedido detalle = new DetallePedido();
@@ -211,6 +220,17 @@ public class PedidoService {
             return pedidoRepository.save(pedido);
         }
         return null;
+    }
+
+    private String normalizarMetodoEntrega(String metodoEntrega) {
+        if (metodoEntrega == null) {
+            return "envio";
+        }
+        String normalizado = metodoEntrega.trim().toLowerCase();
+        if ("tienda".equals(normalizado)) {
+            return "tienda";
+        }
+        return "envio";
     }
 }
 

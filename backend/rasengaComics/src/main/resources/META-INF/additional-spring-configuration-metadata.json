@@ -1,0 +1,29 @@
+{
+  "properties": [
+    {
+      "name": "app.cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Orígenes permitidos para CORS en la API."
+    },
+    {
+      "name": "stripe.api.key",
+      "type": "java.lang.String",
+      "description": "Clave secreta de Stripe usada por el backend."
+    },
+    {
+      "name": "stripe.webhook.secret",
+      "type": "java.lang.String",
+      "description": "Secreto de firma para validar webhooks de Stripe."
+    },
+    {
+      "name": "stripe.success-url",
+      "type": "java.lang.String",
+      "description": "URL de retorno tras un pago correcto en Stripe."
+    },
+    {
+      "name": "stripe.cancel-url",
+      "type": "java.lang.String",
+      "description": "URL de retorno cuando el checkout de Stripe se cancela."
+    }
+  ]
+}

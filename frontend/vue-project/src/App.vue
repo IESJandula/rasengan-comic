@@ -2,7 +2,9 @@
   <div>
     <headerComponent />
     <navComponent />
+    <breadcrumbsComponent />
     <router-view />
+    <scrollToTopButton />
     <footerComponent />
   </div>
 </template>
@@ -13,6 +15,8 @@ import { useAuthStore } from '@/stores/authStore'
 import navComponent from './components/navComponent.vue'
 import headerComponent from './components/headerComponent.vue'
 import footerComponent from './components/footerComponent.vue'
+import breadcrumbsComponent from './components/breadcrumbsComponent.vue'
+import scrollToTopButton from './components/scrollToTopButton.vue'
 
 const authStore = useAuthStore()
 

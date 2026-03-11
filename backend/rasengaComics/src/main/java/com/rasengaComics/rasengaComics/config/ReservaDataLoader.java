@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Configuration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Configuration
 public class ReservaDataLoader {

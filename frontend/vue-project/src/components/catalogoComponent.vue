@@ -1,27 +1,19 @@
 <template>
   <div class="products-container">
-    <!-- Overlay para móvil -->
-    <div 
-      v-if="showFilters" 
-      class="filter-overlay" 
-      @click="toggleFilters"
-    ></div>
-
-    <!-- Botón de toggle para móvil -->
-    <button class="filter-toggle-btn" @click="toggleFilters" aria-label="Toggle filters">
-      <span v-if="showFilters">✕ Cerrar Filtros</span>
-      <span v-else>☰ Filtros</span>
-    </button>
-
     <div class="products-wrapper">
+      <button
+        v-if="isMobile"
+        class="mobile-filter-toggle"
+        @click="showMobileFilters = !showMobileFilters"
+        :aria-expanded="showMobileFilters"
+        aria-controls="catalog-filters"
+      >
+        {{ showMobileFilters ? 'Ocultar filtros' : 'Mostrar filtros' }}
+      </button>
+
       <!-- Filtros (Izquierda) -->
-      <aside class="filters-sidebar" :class="{ 'filters-open': showFilters }">
-        <div class="filters-header">
-          <h2 class="filters-title">Filtros</h2>
-          <button class="filter-close-btn" @click="toggleFilters" aria-label="Cerrar filtros">
-            ✕
-          </button>
-        </div>
+      <aside v-show="!isMobile || showMobileFilters" class="filters-sidebar" id="catalog-filters">
+        <h2 class="filters-title">Filtros</h2>
 
         <!-- Ordenar por -->
         <div class="filter-section">
@@ -376,11 +368,16 @@
             :key="product.id"
             class="product-card"
             @click="viewProduct(product.id)"
+            @keydown.enter="viewProduct(product.id)"
+            @keydown.space.prevent="viewProduct(product.id)"
+            tabindex="0"
+            role="button"
+            :aria-label="`Ver detalle de ${product.name}`"
             style="cursor: pointer;"
           >
             <div class="product-image-container">
               <img :src="product.image" :alt="product.name" class="product-image" />
-              <span v-if="product.stock === 0" class="out-of-stock">Agotado</span>
+              <span v-if="!product.available" class="out-of-stock">Agotado</span>
               <span v-if="product.isReserve" class="reserve-badge">Reserva</span>
               <span v-if="product.isNew" class="new-badge">Nuevo</span>
               <span v-if="product.discount" class="discount-badge">-{{ product.discount }}%</span>
@@ -396,7 +393,8 @@
               </div>
               <button 
                 @click.stop="addToCart(product.id)"
-                :disabled="!product.isReserve && product.stock === 0"
+                :disabled="!product.available && !product.isReserve"
+                :aria-label="product.isReserve ? `Reservar ${product.name}` : `Agregar ${product.name} al carrito`"
                 :class="[
                   'add-to-cart-btn', 
                   product.isReserve ? 'reserve-btn' : '',
@@ -404,7 +402,7 @@
                 ]"
               >
                 <span v-if="recentlyAddedProducts.has(product.id)">✅ Añadido al carrito</span>
-                <span v-else>{{ product.isReserve ? 'Reservar' : (product.stock > 0 ? '🛒 Agregar al Carrito' : 'Agotado') }}</span>
+                <span v-else>{{ product.isReserve ? '📋 Reservar' : (product.available ? '🛒 Agregar al Carrito' : 'No Disponible') }}</span>
               </button>
             </div>
           </div>
@@ -420,7 +418,6 @@
       </main>
     </div>
 
-    <!-- Toast Notification -->
     <Transition name="toast">
       <div v-if="showToast" class="toast-notification">
         <div class="toast-icon">✅</div>
@@ -434,12 +431,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api/axios'
 import { useCartStore } from '@/stores/cartStore'
 
 const getImageUrl = (imageName: string) => {
+  if (!imageName) return ''
+
+  if (
+    imageName.startsWith('http://') ||
+    imageName.startsWith('https://') ||
+    imageName.startsWith('data:') ||
+    imageName.startsWith('blob:')
+  ) {
+    return imageName
+  }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+  if (imageName.startsWith('/')) {
+    return `${baseUrl}${imageName}`
+  }
+
+  if (imageName.startsWith('uploads/')) {
+    return `${baseUrl}/${imageName}`
+  }
+
   return new URL(`../assets/delete_inicio/${imageName}`, import.meta.url).href
 }
 
@@ -468,20 +485,8 @@ const products = ref<Product[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const recentlyAddedProducts = ref<Set<number>>(new Set())
-const showFilters = ref(false)
 const showToast = ref(false)
 const toastMessage = ref('')
-
-// Función para toggle de filtros en móvil
-const toggleFilters = () => {
-  showFilters.value = !showFilters.value
-  // Prevenir scroll del body cuando los filtros están abiertos en móvil
-  if (showFilters.value && window.innerWidth <= 768) {
-    document.body.style.overflow = 'hidden'
-  } else {
-    document.body.style.overflow = ''
-  }
-}
 
 // Función para cargar productos desde la API
 const loadProducts = async () => {
@@ -490,9 +495,11 @@ const loadProducts = async () => {
     error.value = null
     const response = await api.get('/api/products')
     // Transformar las imágenes a URLs completas
+    // Un producto no-reserva se considera disponible solo si available=true Y stock>0
     products.value = response.data.map((product: Product) => ({
       ...product,
-      image: getImageUrl(product.image)
+      image: getImageUrl(product.image),
+      available: product.isReserve ? product.available : (product.available && (product.stock ?? 0) > 0)
     }))
     console.log('✅ Productos cargados:', response.data.length)
   } catch (err) {
@@ -995,9 +1002,22 @@ const minRating = ref<number>(0)
 const minDiscount = ref<number>(0)
 const sortBy = ref('newest')
 const searchQuery = ref('')
+const isMobile = ref(false)
+const showMobileFilters = ref(false)
+
+const updateViewport = () => {
+  isMobile.value = window.innerWidth <= 1024
+
+  if (!isMobile.value) {
+    showMobileFilters.value = true
+  }
+}
 
 // Inicializar filtros desde la URL y cargar productos
 onMounted(async () => {
+  updateViewport()
+  window.addEventListener('resize', updateViewport)
+
   // Cargar productos desde la API
   await loadProducts()
   
@@ -1016,28 +1036,17 @@ onMounted(async () => {
   if (q) {
     searchQuery.value = q
   }
-
-  // Listener para cerrar filtros en móvil al hacer resize
-  window.addEventListener('resize', handleResize)
 })
 
-const handleResize = () => {
-  if (window.innerWidth > 768 && showFilters.value) {
-    showFilters.value = false
-    document.body.style.overflow = ''
-  }
-}
-
-// Cleanup cuando se desmonte el componente
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-  document.body.style.overflow = ''
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateViewport)
 })
 
 // Observar cambios en la URL
 watch(() => route.query, (newQuery) => {
   const category = newQuery.category as string
   const subcategory = newQuery.sub as string
+  const q = newQuery.q as string
   
   // Actualizar categoría
   if (category && !selectedCategories.value.includes(category)) {
@@ -1051,6 +1060,13 @@ watch(() => route.query, (newQuery) => {
     selectedSubcategories.value = [subcategory]
   } else if (!subcategory) {
     selectedSubcategories.value = []
+  }
+
+  // Actualizar texto de búsqueda
+  if (q) {
+    searchQuery.value = q
+  } else {
+    searchQuery.value = ''
   }
 }, { deep: true })
 
@@ -1088,7 +1104,7 @@ const filteredProducts = computed(() => {
       product.price >= priceRange.value.min && 
       product.price <= priceRange.value.max
     
-    const availabilityMatch = !onlyAvailable.value || (product.stock && product.stock > 0)
+    const availabilityMatch = !onlyAvailable.value || product.available
     
     const reserveMatch = !onlyReserves.value || product.isReserve
     
@@ -1136,35 +1152,46 @@ const clearFilters = () => {
   minRating.value = 0
   minDiscount.value = 0
   sortBy.value = 'newest'
+  searchQuery.value = ''
+
+  router.replace({
+    path: '/catalogo',
+    query: {}
+  })
 }
 
 const addToCart = (productId: number) => {
   const product = products.value.find(p => p.id === productId)
   if (!product) return
-  
-  // Agregar al carrito tanto productos normales como reservas
+
+  // Los productos de reserva usan stock alto (pre-orden); los normales usan su stock real
+  const effectiveStock = product.isReserve ? 999 : (product.stock ?? 1)
+
   cartStore.addToCart({
     id: product.id,
     name: product.name,
     category: product.category,
     price: product.price,
-    image: product.image
+    image: product.image,
+    stock: effectiveStock
   })
-  
-  // Mostrar notificación toast
-  toastMessage.value = `${product.name}`
-  showToast.value = true
-  setTimeout(() => {
-    showToast.value = false
-  }, 3000)
-  
+
   // Agregar producto a la lista de recientemente agregados
   recentlyAddedProducts.value.add(productId)
-  
+
+  // Mostrar notificación toast
+  toastMessage.value = `1 unidad(es) de ${product.name}`
+  showToast.value = true
+
   // Remover después de 1.5 segundos para que se vea la animación
   setTimeout(() => {
     recentlyAddedProducts.value.delete(productId)
   }, 1500)
+
+  // Ocultar toast después de 3 segundos
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
 }
 
 const viewProduct = (productId: number) => {
@@ -1211,66 +1238,6 @@ const viewProduct = (productId: number) => {
 .filters-sidebar::-webkit-scrollbar-thumb {
   background: #dc2626;
   border-radius: 10px;
-}
-
-.filters-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.filter-close-btn {
-  display: none;
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #666;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-}
-
-.filter-close-btn:hover {
-  background-color: #f3f4f6;
-  color: #000;
-}
-
-.filter-toggle-btn {
-  display: none;
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  color: white;
-  border: none;
-  border-radius: 50px;
-  padding: 14px 24px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
-  z-index: 999;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.filter-toggle-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.5);
-}
-
-.filter-toggle-btn:active {
-  transform: translateY(0);
-}
-
-.filter-overlay {
-  display: none;
 }
 
 .filters-title {
@@ -1436,6 +1403,10 @@ const viewProduct = (productId: number) => {
   background-color: #b91c1c;
 }
 
+.mobile-filter-toggle {
+  display: none;
+}
+
 .products-main {
   flex: 1;
 }
@@ -1474,6 +1445,11 @@ const viewProduct = (productId: number) => {
 .product-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.product-card:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .product-image-container {
@@ -1600,9 +1576,8 @@ const viewProduct = (productId: number) => {
 }
 
 .add-to-cart-btn:disabled {
-  background: #000000 !important;
-  color: white !important;
-  cursor: not-allowed !important;
+  background-color: #d1d5db;
+  cursor: not-allowed;
 }
 
 .add-to-cart-btn.added-animation {
@@ -1705,9 +1680,93 @@ const viewProduct = (productId: number) => {
   background-color: #b91c1c;
 }
 
+.toast-notification {
+  position: fixed;
+  top: 100px;
+  right: 30px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 20px 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 9999;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.toast-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
+.toast-message {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.4;
+}
+
+.toast-enter-active {
+  animation: toast-in 0.3s ease-out;
+}
+
+.toast-leave-active {
+  animation: toast-out 0.3s ease-in;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
 @media (max-width: 1024px) {
   .products-wrapper {
     flex-direction: column;
+  }
+
+  .mobile-filter-toggle {
+    display: block;
+    width: 100%;
+    background-color: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 12px;
   }
 
   .filters-sidebar {
@@ -1730,64 +1789,12 @@ const viewProduct = (productId: number) => {
     gap: 20px;
   }
 
-  .filter-overlay {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    animation: fadeIn 0.3s ease-in-out;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  .filter-toggle-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
   .filters-sidebar {
-    position: fixed;
-    top: 0;
-    left: -100%;
-    width: 85%;
-    max-width: 320px;
-    height: 100vh;
-    max-height: 100vh;
-    z-index: 1000;
     padding: 15px;
-    border-radius: 0;
-    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.2);
-    transition: left 0.3s ease-in-out;
-    overflow-y: auto;
-  }
-
-  .filters-sidebar.filters-open {
-    left: 0;
-  }
-
-  .filter-close-btn {
-    display: flex;
-  }
-
-  .filters-header {
-    margin-bottom: 20px;
   }
 
   .filters-title {
     font-size: 20px;
-    margin: 0;
   }
 
   .filter-subtitle {
@@ -1818,6 +1825,14 @@ const viewProduct = (productId: number) => {
   .current-price {
     font-size: 16px;
   }
+
+  .toast-notification {
+    top: 80px;
+    right: 15px;
+    left: 15px;
+    min-width: auto;
+    max-width: none;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1825,20 +1840,8 @@ const viewProduct = (productId: number) => {
     padding: 10px 5px;
   }
 
-  .filter-toggle-btn {
-    padding: 12px 20px;
-    font-size: 14px;
-    bottom: 15px;
-    right: 15px;
-  }
-
   .filters-sidebar {
-    width: 90%;
     padding: 12px;
-  }
-
-  .filters-sidebar.filters-open {
-    width: 90%;
   }
 
   .filter-subtitle {
@@ -1880,88 +1883,6 @@ const viewProduct = (productId: number) => {
   .clear-filters-btn {
     padding: 10px;
     font-size: 14px;
-  }
-}
-
-/* Toast Notification */
-.toast-notification {
-  position: fixed;
-  top: 100px;
-  right: 30px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  padding: 20px 25px;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  z-index: 9999;
-  min-width: 300px;
-  max-width: 400px;
-}
-
-.toast-icon {
-  font-size: 28px;
-  flex-shrink: 0;
-}
-
-.toast-content {
-  flex: 1;
-}
-
-.toast-title {
-  margin: 0 0 5px 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: white;
-}
-
-.toast-message {
-  margin: 0;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.95);
-  line-height: 1.4;
-}
-
-/* Transiciones del toast */
-.toast-enter-active {
-  animation: toast-in 0.3s ease-out;
-}
-
-.toast-leave-active {
-  animation: toast-out 0.3s ease-in;
-}
-
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateX(100px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes toast-out {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(100px);
-  }
-}
-
-@media (max-width: 768px) {
-  .toast-notification {
-    top: 80px;
-    right: 15px;
-    left: 15px;
-    min-width: auto;
-    max-width: none;
   }
 }
 </style>

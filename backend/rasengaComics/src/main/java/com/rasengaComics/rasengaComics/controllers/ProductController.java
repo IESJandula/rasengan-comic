@@ -35,8 +35,12 @@ public class ProductController {
     // POST - Crear nuevo producto
     @PostMapping
     public ResponseEntity<Product> createProduct(@RequestBody Product product) {
-        Product createdProduct = productService.createProduct(product);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct);
+        try {
+            Product createdProduct = productService.createProduct(product);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+        }
     }
     
     // PUT - Actualizar producto
@@ -45,16 +49,24 @@ public class ProductController {
         try {
             Product updatedProduct = productService.updateProduct(id, product);
             return ResponseEntity.ok(updatedProduct);
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
         }
     }
     
     // DELETE - Eliminar producto
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
-        productService.deleteProduct(id);
-        return ResponseEntity.noContent().build();
+        try {
+            productService.deleteProduct(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+        }
     }
     
     // GET - Productos por categoría

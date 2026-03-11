@@ -40,7 +40,6 @@
       >
         <div class="reserva-header">
           <div class="producto-info">
-            <img :src="reserva.producto.imagen" :alt="reserva.producto.nombre" class="producto-imagen" />
             <div class="producto-details">
               <h3>{{ reserva.producto.nombre }}</h3>
               <p class="producto-categoria">{{ reserva.producto.categoria }}</p>
@@ -143,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import api from '@/api/axios'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -347,6 +346,14 @@ onMounted(() => {
   loadReservas()
   startTimer()
 })
+
+watch(
+  () => authStore.user?.uid,
+  async (uid) => {
+    if (!uid) return
+    await loadReservas()
+  }
+)
 
 onBeforeUnmount(() => {
   if (timerInterval) {

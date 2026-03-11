@@ -1,13 +1,19 @@
 <template>
   <div class="home-container">
     <!-- Carrusel -->
-    <div class="carousel-wrapper">
+    <div
+      class="carousel-wrapper"
+      :style="carouselWrapperStyle"
+      @touchstart.passive="onTouchStart"
+      @touchend.passive="onTouchEnd"
+    >
       <div class="carousel-container">
         <img
           v-for="(slide, index) in slides"
           :key="index"
           :src="slide"
           :alt="`Slide ${index + 1}`"
+          @load="updateSlideAspectRatio($event, index)"
           :class="[
             'carousel-image',
             index === currentSlide ? 'active' : ''
@@ -19,12 +25,14 @@
       <button
         @click="prevSlide"
         class="carousel-button carousel-button-left"
+        aria-label="Imagen anterior"
       >
         ◄
       </button>
       <button
         @click="nextSlide"
         class="carousel-button carousel-button-right"
+        aria-label="Siguiente imagen"
       >
         ►
       </button>
@@ -35,6 +43,7 @@
           v-for="(_, index) in slides"
           :key="index"
           @click="currentSlide = index"
+          :aria-label="`Ir al slide ${index + 1}`"
           :class="['indicator', index === currentSlide ? 'active' : '']"
         />
       </div>
@@ -53,6 +62,11 @@
             :key="item.id"
             class="product-card"
             @click="viewProduct(item.id)"
+            @keydown.enter="viewProduct(item.id)"
+            @keydown.space.prevent="viewProduct(item.id)"
+            tabindex="0"
+            role="button"
+            :aria-label="`Ver detalle de ${item.name}`"
             style="cursor: pointer;"
           >
             <img
@@ -75,36 +89,35 @@
           PRODUCTOS DISPONIBLES PARA RESERVA
         </h2>
         <div class="reservas-card">
-          <p class="reservas-subtitle">Próximos lanzamientos y productos especiales</p>
-          
           <!-- Loading -->
           <div v-if="loadingReservas" class="loading-message">
             Cargando productos disponibles...
           </div>
 
           <!-- Lista de productos para reservar -->
-          <div v-else-if="productosReserva.length > 0" class="reservas-list">
+          <div v-else-if="productosReserva.length > 0" class="products-grid">
             <div
               v-for="producto in productosReserva.slice(0, 3)"
               :key="producto.id"
-              class="reserva-item"
+              class="product-card reserva-product-card"
+              @click="viewProduct(producto.id)"
+              @keydown.enter="viewProduct(producto.id)"
+              @keydown.space.prevent="viewProduct(producto.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${producto.name}`"
+              style="cursor: pointer;"
             >
               <img 
                 :src="resolveImageUrl(producto.image) || 'https://via.placeholder.com/80'" 
                 :alt="producto.name"
-                class="reserva-image"
+                class="product-image"
               />
-              <div class="reserva-info">
-                <h4 class="reserva-title">{{ producto.name }}</h4>
-                <p class="reserva-category">{{ producto.category }}</p>
-                <p class="reserva-price">{{ formatPrice(producto.price) }}</p>
+              <div class="product-info">
+                <h3 class="product-name">{{ producto.name }}</h3>
+                <p class="product-category">{{ producto.category }}</p>
+                <p class="product-price">{{ formatPrice(producto.price) }}</p>
               </div>
-              <button 
-                @click="handleReservar(producto)" 
-                class="reserva-button"
-              >
-                Reservar
-              </button>
             </div>
           </div>
 
@@ -127,6 +140,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -152,6 +170,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -177,6 +200,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -202,6 +230,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -227,6 +260,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -252,6 +290,11 @@
               :key="item.id"
               class="product-card"
               @click="viewProduct(item.id)"
+              @keydown.enter="viewProduct(item.id)"
+              @keydown.space.prevent="viewProduct(item.id)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Ver detalle de ${item.nombre}`"
               style="cursor: pointer;"
             >
               <img
@@ -273,7 +316,7 @@
     <!-- Modal de Autenticación Requerida -->
     <div v-if="showAuthModal" class="auth-modal-overlay">
       <div class="auth-modal">
-        <button @click="closeAuthModal" class="modal-close-btn">✕</button>
+        <button @click="closeAuthModal" class="modal-close-btn" aria-label="Cerrar modal">✕</button>
         
         <div class="modal-content">
           <div class="modal-icon">🔐</div>
@@ -299,7 +342,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore'
 import { useCartStore } from '@/stores/cartStore'
@@ -316,6 +359,26 @@ import banner3 from '@/assets/images/banner3.webp';
 
 // Función para cargar imágenes desde delete_inicio
 const getImageUrl = (imageName: string) => {
+  if (!imageName) return ''
+
+  if (
+    imageName.startsWith('http://') ||
+    imageName.startsWith('https://') ||
+    imageName.startsWith('data:') ||
+    imageName.startsWith('blob:')
+  ) {
+    return imageName
+  }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+  if (imageName.startsWith('/')) {
+    return `${baseUrl}${imageName}`
+  }
+
+  if (imageName.startsWith('uploads/')) {
+    return `${baseUrl}/${imageName}`
+  }
+
   return new URL(`../assets/delete_inicio/${imageName}`, import.meta.url).href
 }
 
@@ -329,17 +392,96 @@ const resolveImageUrl = (image?: string): string => {
   ) {
     return image
   }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+  if (image.startsWith('/')) {
+    return `${baseUrl}${image}`
+  }
+
+  if (image.startsWith('uploads/')) {
+    return `${baseUrl}/${image}`
+  }
+
   return new URL(`../assets/delete_inicio/${image}`, import.meta.url).href
 }
 
 const currentSlide = ref(0);
 
 // Imágenes del carrusel
-const slides = [
+const defaultSlides = [
   banner1,
   banner2,
   banner3,
-];
+]
+const slides = ref<string[]>([...defaultSlides])
+const slideAspectRatios = ref<number[]>(defaultSlides.map(() => 2.74))
+
+const carouselWrapperStyle = computed(() => {
+  const ratio = slideAspectRatios.value[currentSlide.value] || 2.74
+
+  return {
+    aspectRatio: `${ratio}`
+  }
+})
+
+const updateSlideAspectRatio = (event: Event, index: number): void => {
+  const image = event.target as HTMLImageElement | null
+
+  if (!image || !image.naturalWidth || !image.naturalHeight) {
+    return
+  }
+
+  slideAspectRatios.value[index] = image.naturalWidth / image.naturalHeight
+}
+
+const resolveCarouselSlideUrl = (image?: string): string => {
+  if (!image) {
+    return ''
+  }
+
+  if (
+    image.startsWith('http://') ||
+    image.startsWith('https://') ||
+    image.startsWith('data:') ||
+    image.startsWith('blob:')
+  ) {
+    return image
+  }
+
+  const baseUrl = String(api.defaults.baseURL || '').replace(/\/+$/, '')
+  if (image.startsWith('/')) {
+    return `${baseUrl}${image}`
+  }
+
+  if (image.startsWith('uploads/')) {
+    return `${baseUrl}/${image}`
+  }
+
+  return new URL(`../assets/delete_inicio/${image}`, import.meta.url).href
+}
+
+const loadCarouselSlides = async (): Promise<void> => {
+  try {
+    const response = await api.get('/api/home-carousel')
+    const apiSlides = response.data?.slides
+    if (!Array.isArray(apiSlides)) {
+      slides.value = [...defaultSlides]
+      slideAspectRatios.value = defaultSlides.map(() => 2.74)
+      return
+    }
+
+    const normalized = apiSlides
+      .map((item) => resolveCarouselSlideUrl(typeof item === 'string' ? item : ''))
+      .filter((item): item is string => Boolean(item))
+
+    slides.value = normalized.length > 0 ? normalized : [...defaultSlides]
+    slideAspectRatios.value = slides.value.map(() => 2.74)
+  } catch (error) {
+    console.error('Error al cargar el carrusel configurado:', error)
+    slides.value = [...defaultSlides]
+    slideAspectRatios.value = defaultSlides.map(() => 2.74)
+  }
+}
 
 // Productos más comprados (cargados desde API)
 const productosMasComprados = ref<any[]>([])
@@ -612,14 +754,42 @@ const ultimosAccesorios = ref<any[]>([
   }
 ]);
 
+// Touch swipe
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+const SWIPE_THRESHOLD = 50
+
+const onTouchStart = (e: TouchEvent) => {
+  const touch = e.changedTouches[0]
+  if (!touch) {
+    return
+  }
+
+  touchStartX.value = touch.screenX
+}
+
+const onTouchEnd = (e: TouchEvent) => {
+  const touch = e.changedTouches[0]
+  if (!touch) {
+    return
+  }
+
+  touchEndX.value = touch.screenX
+  const diff = touchStartX.value - touchEndX.value
+  if (Math.abs(diff) > SWIPE_THRESHOLD) {
+    if (diff > 0) nextSlide()
+    else prevSlide()
+  }
+}
+
 let timer: ReturnType<typeof setInterval> | null = null;
 
 const prevSlide = () => {
-  currentSlide.value = (currentSlide.value - 1 + slides.length) % slides.length;
+  currentSlide.value = (currentSlide.value - 1 + slides.value.length) % slides.value.length;
 };
 
 const nextSlide = () => {
-  currentSlide.value = (currentSlide.value + 1) % slides.length;
+  currentSlide.value = (currentSlide.value + 1) % slides.value.length;
 };
 
 const startAutoSlide = () => {
@@ -794,6 +964,7 @@ const goToLogin = () => {
 }
 
 onMounted(() => {
+  void loadCarouselSlides()
   startAutoSlide()
   loadProductosMasComprados()
   loadEventosDisponibles()
@@ -815,20 +986,19 @@ onBeforeUnmount(() => {
 .carousel-wrapper {
   position: relative;
   width: 100%;
-  height: 500px;
+  max-height: 700px;
+  height: auto;
   overflow: hidden;
-  background-color: #1f2937;
+  background-color: transparent;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   margin-bottom: 40px;
+  touch-action: pan-y;
 }
 
 .carousel-container {
   position: relative;
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .carousel-image {
@@ -840,12 +1010,7 @@ onBeforeUnmount(() => {
   object-fit: contain;
   object-position: center;
   opacity: 0;
-  transition: opacity 1s ease-in-out;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  -webkit-backface-visibility: hidden;
-  -moz-backface-visibility: hidden;
-  backface-visibility: hidden;
+  transition: opacity 0.8s ease-in-out;
 }
 
 .carousel-image.active {
@@ -951,6 +1116,11 @@ onBeforeUnmount(() => {
   transform: translateY(-8px);
 }
 
+.product-card:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: 2px;
+}
+
 .product-image {
   width: 100%;
   height: 200px;
@@ -985,17 +1155,7 @@ onBeforeUnmount(() => {
 
 /* Reservas */
 .reservas-card {
-  background-color: white;
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 2px solid #fecaca;
-}
-
-.reservas-subtitle {
-  color: #6b7280;
-  margin-bottom: 25px;
-  font-size: 16px;
+  padding: 0;
 }
 
 .reservas-list {
@@ -1089,6 +1249,16 @@ onBeforeUnmount(() => {
   transform: scale(1.05);
 }
 
+.reserva-product-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.reserva-card-button {
+  width: 100%;
+  margin-top: 14px;
+}
+
 /* Modal de Autenticación */
 .auth-modal-overlay {
   position: fixed;
@@ -1149,6 +1319,11 @@ onBeforeUnmount(() => {
 
 .modal-close-btn:hover {
   color: #374151;
+}
+
+.modal-close-btn:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .modal-content {
@@ -1276,10 +1451,6 @@ onBeforeUnmount(() => {
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .carousel-wrapper {
-    height: 400px;
-  }
-
   .section-title {
     font-size: 28px;
   }
@@ -1297,7 +1468,12 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .carousel-wrapper {
-    height: 350px;
+    margin-bottom: 24px;
+  }
+
+  .carousel-indicators {
+    bottom: 12px;
+    gap: 10px;
   }
 
   .content-wrapper {
@@ -1345,10 +1521,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 480px) {
-  .carousel-wrapper {
-    height: 280px;
-  }
-
   .carousel-button {
     padding: 12px 16px;
     font-size: 16px;

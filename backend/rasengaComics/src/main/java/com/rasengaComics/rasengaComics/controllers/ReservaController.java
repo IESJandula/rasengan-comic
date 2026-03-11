@@ -3,7 +3,6 @@ package com.rasengaComics.rasengaComics.controllers;
 import com.rasengaComics.rasengaComics.services.ReservaService;
 import com.rasengaComics.rasengaComics.models.Reserva;
 import com.rasengaComics.rasengaComics.dto.request.ReservaRequest;
-import com.rasengaComics.rasengaComics.dto.response.ReservaResponse;
 import com.rasengaComics.rasengaComics.dto.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
