@@ -161,13 +161,9 @@ public class PedidoService {
                 productRepository.save(product);
                 logger.info("【STOCK ACTUALIZADO】 Nuevo stock: {}", product.getStock());
                 
-                // Buscar o crear el producto en tabla productos usando el MISMO ID de products.
-                // No actualizamos registros existentes aquí para evitar conflictos de concurrencia
-                // durante el procesamiento de webhooks de Stripe.
-                Optional<Producto> optProducto = productoRepository.findById(item.getProductoId());
-                if (optProducto.isEmpty()) {
-                    optProducto = productoRepository.findByNombre(product.getName());
-                }
+                // NO usar item.getProductoId() sobre tabla productos: ese ID pertenece a tabla products
+                // y puede cruzarse con registros distintos. Vincular por nombre evita asociaciones erróneas.
+                Optional<Producto> optProducto = productoRepository.findByNombre(product.getName());
                 Producto producto;
                 if (optProducto.isPresent()) {
                     producto = optProducto.get();

@@ -142,9 +142,9 @@ public class PedidoController {
             item.setPrecio(detalle.getPrecioUnitario());
             item.setCantidad(detalle.getCantidad());
 
-            Optional<Product> productInfo = productRepository.findById(detalle.getProducto().getId());
+            Optional<Product> productInfo = productRepository.findByName(detalle.getProducto().getNombre());
             if (productInfo.isEmpty()) {
-                productInfo = productRepository.findByName(detalle.getProducto().getNombre());
+                productInfo = productRepository.findById(detalle.getProducto().getId());
             }
             
             // Fallback por estado: si ya va por flujo de reservas, no perder el item aunque falle lookup.
