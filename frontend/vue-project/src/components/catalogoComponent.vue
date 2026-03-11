@@ -1026,6 +1026,7 @@ onBeforeUnmount(() => {
 watch(() => route.query, (newQuery) => {
   const category = newQuery.category as string
   const subcategory = newQuery.sub as string
+  const q = newQuery.q as string
   
   // Actualizar categoría
   if (category && !selectedCategories.value.includes(category)) {
@@ -1039,6 +1040,13 @@ watch(() => route.query, (newQuery) => {
     selectedSubcategories.value = [subcategory]
   } else if (!subcategory) {
     selectedSubcategories.value = []
+  }
+
+  // Actualizar texto de búsqueda
+  if (q) {
+    searchQuery.value = q
+  } else {
+    searchQuery.value = ''
   }
 }, { deep: true })
 
@@ -1124,6 +1132,12 @@ const clearFilters = () => {
   minRating.value = 0
   minDiscount.value = 0
   sortBy.value = 'newest'
+  searchQuery.value = ''
+
+  router.replace({
+    path: '/catalogo',
+    query: {}
+  })
 }
 
 const addToCart = (productId: number) => {
