@@ -15,6 +15,24 @@ import terminosYCondicionesComponent from '@/components/terminosYCondicionesComp
 import politicaPrivacidadComponent from '@/components/politicaPrivacidadComponent.vue'
 import politicaCookiesComponent from '@/components/politicaCookiesComponent.vue'
 
+const resetScrollableContainers = () => {
+  const scrollables = document.querySelectorAll<HTMLElement>('*')
+
+  scrollables.forEach((element) => {
+    const style = window.getComputedStyle(element)
+    const overflowY = style.overflowY
+    const isScrollable = (overflowY === 'auto' || overflowY === 'scroll') && element.scrollTop > 0
+
+    if (isScrollable) {
+      element.scrollTop = 0
+    }
+  })
+
+  document.documentElement.scrollTop = 0
+  document.body.scrollTop = 0
+  window.scrollTo(0, 0)
+}
+
 const routes = [
   {
     path: '/',
@@ -106,6 +124,19 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+
+    return { top: 0, left: 0 }
+  }
+})
+
+router.afterEach(() => {
+  requestAnimationFrame(() => {
+    resetScrollableContainers()
+  })
 })
 
 export default router
