@@ -3,6 +3,7 @@
     <!-- Carrusel -->
     <div
       class="carousel-wrapper"
+      :style="carouselWrapperStyle"
       @touchstart.passive="onTouchStart"
       @touchend.passive="onTouchEnd"
     >
@@ -12,6 +13,7 @@
           :key="index"
           :src="slide"
           :alt="`Slide ${index + 1}`"
+          @load="updateSlideAspectRatio($event, index)"
           :class="[
             'carousel-image',
             index === currentSlide ? 'active' : ''
@@ -340,7 +342,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore'
 import { useCartStore } from '@/stores/cartStore'
@@ -412,6 +414,25 @@ const defaultSlides = [
   banner3,
 ]
 const slides = ref<string[]>([...defaultSlides])
+const slideAspectRatios = ref<number[]>(defaultSlides.map(() => 2.74))
+
+const carouselWrapperStyle = computed(() => {
+  const ratio = slideAspectRatios.value[currentSlide.value] || 2.74
+
+  return {
+    aspectRatio: `${ratio}`
+  }
+})
+
+const updateSlideAspectRatio = (event: Event, index: number): void => {
+  const image = event.target as HTMLImageElement | null
+
+  if (!image || !image.naturalWidth || !image.naturalHeight) {
+    return
+  }
+
+  slideAspectRatios.value[index] = image.naturalWidth / image.naturalHeight
+}
 
 const resolveCarouselSlideUrl = (image?: string): string => {
   if (!image) {
@@ -445,6 +466,7 @@ const loadCarouselSlides = async (): Promise<void> => {
     const apiSlides = response.data?.slides
     if (!Array.isArray(apiSlides)) {
       slides.value = [...defaultSlides]
+      slideAspectRatios.value = defaultSlides.map(() => 2.74)
       return
     }
 
@@ -453,9 +475,11 @@ const loadCarouselSlides = async (): Promise<void> => {
       .filter((item): item is string => Boolean(item))
 
     slides.value = normalized.length > 0 ? normalized : [...defaultSlides]
+    slideAspectRatios.value = slides.value.map(() => 2.74)
   } catch (error) {
     console.error('Error al cargar el carrusel configurado:', error)
     slides.value = [...defaultSlides]
+    slideAspectRatios.value = defaultSlides.map(() => 2.74)
   }
 }
 
@@ -962,9 +986,10 @@ onBeforeUnmount(() => {
 .carousel-wrapper {
   position: relative;
   width: 100%;
-  height: clamp(220px, 36.5vw, 700px);
+  max-height: 700px;
+  height: auto;
   overflow: hidden;
-  background-color: #1f2937;
+  background-color: transparent;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   margin-bottom: 40px;
   touch-action: pan-y;
@@ -982,7 +1007,7 @@ onBeforeUnmount(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   opacity: 0;
   transition: opacity 0.8s ease-in-out;
@@ -1442,6 +1467,15 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
+  .carousel-wrapper {
+    margin-bottom: 24px;
+  }
+
+  .carousel-indicators {
+    bottom: 12px;
+    gap: 10px;
+  }
+
   .content-wrapper {
     padding: 30px 15px;
   }

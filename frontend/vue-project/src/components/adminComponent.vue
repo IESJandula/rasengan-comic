@@ -619,6 +619,11 @@
         <p class="carousel-admin-subtitle">
           Sube o cambia las imagenes del carrusel principal de la home. Estos cambios se guardan en la base de datos y son visibles para todos los visitantes.
         </p>
+        <div class="carousel-admin-help">
+          <strong>Proporcion recomendada:</strong> 2.74:1
+          <span>Ideal: 1920 x 700 px. Minimo recomendado: 1600 x 584 px.</span>
+          <span>Manten el texto y los elementos importantes centrados para que se vean bien en desktop y movil.</span>
+        </div>
 
         <div class="carousel-admin-grid">
           <article v-for="(slide, index) in carouselSlides" :key="`carousel-slide-${index}`" class="carousel-admin-card">
@@ -2222,6 +2227,22 @@ const exportProductsToExcel = async () => {
 .carousel-admin-subtitle {
   color: #6b7280;
   margin-bottom: 20px;
+}
+
+.carousel-admin-help {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #7f1d1d;
+  font-size: 14px;
+}
+
+.carousel-admin-help strong {
+  color: #991b1b;
 }
 
 .carousel-admin-grid {
