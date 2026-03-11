@@ -82,21 +82,6 @@
           </div>
         </div>
 
-        <!-- Preferencias -->
-        <div v-if="activeTab === 'Preferencias'" class="tab-pane">
-          <div class="preferences">
-            <label class="preference-item">
-              <input v-model="preferences.newsletter" type="checkbox" />
-              <span>Recibir ofertas por email</span>
-            </label>
-            <label class="preference-item">
-              <input v-model="preferences.notifications" type="checkbox" />
-              <span>Notificaciones de pedidos</span>
-            </label>
-          </div>
-          <button @click="savePreferences" class="save-preferences-btn">Guardar Preferencias</button>
-        </div>
-
         <!-- Mis compras -->
         <div v-if="activeTab === 'Mis compras'" class="tab-pane">
           <!-- Mensaje de éxito después de pago -->
@@ -176,24 +161,36 @@
         <!-- Seguridad -->
         <div v-if="activeTab === 'Seguridad'" class="tab-pane">
           <div class="security-section">
-            <h3>Cambiar Contraseña</h3>
-            <p v-if="passwordChangeSuccess" class="success-message">✓ Contraseña cambiada exitosamente</p>
-            <p v-if="passwordChangeError" class="error-message">✗ {{ passwordChangeError }}</p>
-            <div class="form-group">
-              <label>Contraseña Actual</label>
-              <input v-model="passwordForm.currentPassword" type="password" placeholder="••••••••" />
+            <!-- Aviso para usuarios de Google -->
+            <div v-if="isGoogleUser" class="google-user-notice">
+              <div class="notice-icon">ℹ️</div>
+              <div class="notice-content">
+                <h4>Cuenta vinculada con Google</h4>
+                <p>Tu cuenta está registrada a través de Google. No puedes cambiar tu contraseña aquí. Para cambiar tu contraseña, accede a tu cuenta de Google.</p>
+              </div>
             </div>
-            <div class="form-group">
-              <label>Nueva Contraseña</label>
-              <input v-model="passwordForm.newPassword" type="password" placeholder="••••••••" />
+
+            <!-- Formulario de cambio de contraseña (solo para usuarios con email/password) -->
+            <div v-else>
+              <h3>Cambiar Contraseña</h3>
+              <p v-if="passwordChangeSuccess" class="success-message">✓ Contraseña cambiada exitosamente</p>
+              <p v-if="passwordChangeError" class="error-message">✗ {{ passwordChangeError }}</p>
+              <div class="form-group">
+                <label>Contraseña Actual</label>
+                <input v-model="passwordForm.currentPassword" type="password" placeholder="••••••••" />
+              </div>
+              <div class="form-group">
+                <label>Nueva Contraseña</label>
+                <input v-model="passwordForm.newPassword" type="password" placeholder="••••••••" />
+              </div>
+              <div class="form-group">
+                <label>Confirmar Contraseña</label>
+                <input v-model="passwordForm.confirmPassword" type="password" placeholder="••••••••" />
+              </div>
+              <button @click="changePassword" class="change-password-btn" :disabled="passwordChangeLoading">
+                {{ passwordChangeLoading ? 'Cambiando...' : 'Cambiar Contraseña' }}
+              </button>
             </div>
-            <div class="form-group">
-              <label>Confirmar Contraseña</label>
-              <input v-model="passwordForm.confirmPassword" type="password" placeholder="••••••••" />
-            </div>
-            <button @click="changePassword" class="change-password-btn" :disabled="passwordChangeLoading">
-              {{ passwordChangeLoading ? 'Cambiando...' : 'Cambiar Contraseña' }}
-            </button>
           </div>
         </div>
       </div>
@@ -275,8 +272,14 @@ const router = useRouter()
 const activeTab = ref('Información Personal')
 const isAdmin = ref(true) // TODO: Obtener del backend
 const tabs = computed(() => {
-  const baseTabs = ['Información Personal', 'Dirección', 'Preferencias', 'Mis compras', 'Mis reservas', 'Seguridad']
+  const baseTabs = ['Información Personal', 'Dirección', 'Mis compras', 'Mis reservas', 'Seguridad']
   return baseTabs
+})
+
+const isGoogleUser = computed(() => {
+  const currentUser = auth.currentUser
+  if (!currentUser) return false
+  return currentUser.providerData.some(provider => provider.providerId === 'google.com')
 })
 
 // Estados de compras
@@ -299,12 +302,6 @@ const user = ref({
   }
 })
 
-// Preferencias
-const preferences = ref({
-  newsletter: true,
-  notifications: true,
-  sms: false
-})
 
 type PersistedProfile = {
   name: string
@@ -314,11 +311,6 @@ type PersistedProfile = {
     city: string
     zipCode: string
     country: string
-  }
-  preferences: {
-    newsletter: boolean
-    notifications: boolean
-    sms: boolean
   }
 }
 
@@ -334,8 +326,7 @@ const saveProfileToStorage = () => {
   const payload: PersistedProfile = {
     name: user.value.name,
     phone: user.value.phone,
-    address: { ...user.value.address },
-    preferences: { ...preferences.value }
+    address: { ...user.value.address }
   }
 
   localStorage.setItem(storageKey, JSON.stringify(payload))
@@ -359,11 +350,6 @@ const loadProfileFromStorage = () => {
         ...user.value.address,
         ...(parsed.address || {})
       }
-    }
-
-    preferences.value = {
-      ...preferences.value,
-      ...(parsed.preferences || {})
     }
 
     if (authStore.user) {
@@ -542,12 +528,6 @@ const addAddress = () => {
     country: 'España'
   }
   showEditAddressModal.value = true
-}
-
-// Guardar preferencias
-const savePreferences = () => {
-  saveProfileToStorage()
-  alert('✓ Preferencias guardadas correctamente')
 }
 
 // Cambiar contraseña con Firebase
@@ -1568,6 +1548,76 @@ watch(activeTab, (value) => {
 
 .change-password-btn:hover {
   background-color: #b91c1c;
+}
+
+.google-user-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 16px 20px;
+  background-color: #eff6ff;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+  margin-bottom: 20px;
+}
+
+.notice-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.notice-content {
+  flex: 1;
+}
+
+.notice-content h4 {
+  margin: 0 0 6px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.notice-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #0c4a6e;
+  line-height: 1.5;
+}
+
+.google-user-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 16px 20px;
+  background-color: #eff6ff;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+  margin-bottom: 20px;
+}
+
+.notice-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.notice-content {
+  flex: 1;
+}
+
+.notice-content h4 {
+  margin: 0 0 6px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.notice-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #0c4a6e;
+  line-height: 1.5;
 }
 
 /* ==================== Gestión de Descuentos ==================== */

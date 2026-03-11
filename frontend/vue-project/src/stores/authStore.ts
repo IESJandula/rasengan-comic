@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { auth } from '@/firebase'
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import type { User } from 'firebase/auth'
 
 interface AuthUser {
@@ -42,6 +42,24 @@ export const useAuthStore = defineStore('auth', () => {
   // Alias y funciones usadas por componentes
   const logout = async () => {
     await logoutFirebase()
+  }
+
+  const loginWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider()
+      const res = await signInWithPopup(auth, provider)
+      user.value = {
+        email: res.user.email,
+        name: res.user.displayName ?? res.user.email?.split('@')[0] ?? '',
+        avatar: res.user.photoURL ?? '',
+        uid: res.user.uid
+      }
+      isAuthenticated.value = true
+      return true
+    } catch (err) {
+      console.error('google login error', err)
+      return false
+    }
   }
 
   const register = async (fullname: string, email: string, password: string) => {
@@ -95,6 +113,7 @@ export const useAuthStore = defineStore('auth', () => {
     loginFirebase,
     logoutFirebase,
     logout,
+    loginWithGoogle,
     register,
     loadFromStorage,
     initFirebase
