@@ -1,8 +1,16 @@
 <template>
   <div class="products-container">
     <div class="products-wrapper">
+      <button
+        v-if="isMobile"
+        class="mobile-filter-toggle"
+        @click="showMobileFilters = !showMobileFilters"
+      >
+        {{ showMobileFilters ? 'Ocultar filtros' : 'Mostrar filtros' }}
+      </button>
+
       <!-- Filtros (Izquierda) -->
-      <aside class="filters-sidebar">
+      <aside v-show="!isMobile || showMobileFilters" class="filters-sidebar">
         <h2 class="filters-title">Filtros</h2>
 
         <!-- Ordenar por -->
@@ -415,7 +423,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api/axios'
 import { useCartStore } from '@/stores/cartStore'
@@ -966,9 +974,22 @@ const minRating = ref<number>(0)
 const minDiscount = ref<number>(0)
 const sortBy = ref('newest')
 const searchQuery = ref('')
+const isMobile = ref(false)
+const showMobileFilters = ref(false)
+
+const updateViewport = () => {
+  isMobile.value = window.innerWidth <= 1024
+
+  if (!isMobile.value) {
+    showMobileFilters.value = true
+  }
+}
 
 // Inicializar filtros desde la URL y cargar productos
 onMounted(async () => {
+  updateViewport()
+  window.addEventListener('resize', updateViewport)
+
   // Cargar productos desde la API
   await loadProducts()
   
@@ -987,6 +1008,10 @@ onMounted(async () => {
   if (q) {
     searchQuery.value = q
   }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateViewport)
 })
 
 // Observar cambios en la URL
@@ -1336,6 +1361,10 @@ const viewProduct = (productId: number) => {
   background-color: #b91c1c;
 }
 
+.mobile-filter-toggle {
+  display: none;
+}
+
 .products-main {
   flex: 1;
 }
@@ -1677,6 +1706,20 @@ const viewProduct = (productId: number) => {
 @media (max-width: 1024px) {
   .products-wrapper {
     flex-direction: column;
+  }
+
+  .mobile-filter-toggle {
+    display: block;
+    width: 100%;
+    background-color: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 12px;
   }
 
   .filters-sidebar {
