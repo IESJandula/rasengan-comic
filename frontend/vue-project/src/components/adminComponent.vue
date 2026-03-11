@@ -597,7 +597,7 @@
       <div v-if="activeTab === 'Carrusel Home'" class="admin-section">
         <h1>Gestion del Carrusel Home</h1>
         <p class="carousel-admin-subtitle">
-          Sube o cambia las imagenes del carrusel principal de la home. Estos cambios se guardan para este navegador.
+          Sube o cambia las imagenes del carrusel principal de la home. Estos cambios se guardan en la base de datos y son visibles para todos los visitantes.
         </p>
 
         <div class="carousel-admin-grid">
@@ -818,7 +818,7 @@ if (!isAdmin.value) {
   router.push('/')
 }
 
-const activeTab = ref('Estadísticas')
+const activeTab = ref('Reservas')
 const tabs = ['Reservas', 'Envios', 'Carrusel Home', 'Productos', 'Eventos', 'Descuentos', 'Reportes']
 
 // Reservas Admin

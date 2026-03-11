@@ -40,7 +40,6 @@
       >
         <div class="reserva-header">
           <div class="producto-info">
-            <img :src="reserva.producto.imagen" :alt="reserva.producto.nombre" class="producto-imagen" />
             <div class="producto-details">
               <h3>{{ reserva.producto.nombre }}</h3>
               <p class="producto-categoria">{{ reserva.producto.categoria }}</p>
