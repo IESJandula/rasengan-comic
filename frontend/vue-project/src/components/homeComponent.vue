@@ -79,36 +79,30 @@
           PRODUCTOS DISPONIBLES PARA RESERVA
         </h2>
         <div class="reservas-card">
-          <p class="reservas-subtitle">Próximos lanzamientos y productos especiales</p>
-          
           <!-- Loading -->
           <div v-if="loadingReservas" class="loading-message">
             Cargando productos disponibles...
           </div>
 
           <!-- Lista de productos para reservar -->
-          <div v-else-if="productosReserva.length > 0" class="reservas-list">
+          <div v-else-if="productosReserva.length > 0" class="products-grid">
             <div
               v-for="producto in productosReserva.slice(0, 3)"
               :key="producto.id"
-              class="reserva-item"
+              class="product-card reserva-product-card"
+              @click="viewProduct(producto.id)"
+              style="cursor: pointer;"
             >
               <img 
                 :src="resolveImageUrl(producto.image) || 'https://via.placeholder.com/80'" 
                 :alt="producto.name"
-                class="reserva-image"
+                class="product-image"
               />
-              <div class="reserva-info">
-                <h4 class="reserva-title">{{ producto.name }}</h4>
-                <p class="reserva-category">{{ producto.category }}</p>
-                <p class="reserva-price">{{ formatPrice(producto.price) }}</p>
+              <div class="product-info">
+                <h3 class="product-name">{{ producto.name }}</h3>
+                <p class="product-category">{{ producto.category }}</p>
+                <p class="product-price">{{ formatPrice(producto.price) }}</p>
               </div>
-              <button 
-                @click="handleReservar(producto)" 
-                class="reserva-button"
-              >
-                Reservar
-              </button>
             </div>
           </div>
 
@@ -1050,17 +1044,7 @@ onBeforeUnmount(() => {
 
 /* Reservas */
 .reservas-card {
-  background-color: white;
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 2px solid #fecaca;
-}
-
-.reservas-subtitle {
-  color: #6b7280;
-  margin-bottom: 25px;
-  font-size: 16px;
+  padding: 0;
 }
 
 .reservas-list {
@@ -1152,6 +1136,16 @@ onBeforeUnmount(() => {
 .reserva-button:hover {
   background-color: #991b1b;
   transform: scale(1.05);
+}
+
+.reserva-product-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.reserva-card-button {
+  width: 100%;
+  margin-top: 14px;
 }
 
 /* Modal de Autenticación */
