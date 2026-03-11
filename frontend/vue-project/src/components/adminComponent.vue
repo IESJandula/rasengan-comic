@@ -55,7 +55,6 @@
 
             <div class="reserva-admin-body">
               <div class="cliente-info">
-                <img :src="reserva.cliente.avatar" :alt="reserva.cliente.nombre" class="cliente-avatar" />
                 <div class="cliente-details">
                   <h4>{{ reserva.cliente.nombre }}</h4>
                   <p>{{ reserva.cliente.email }}</p>
@@ -64,7 +63,6 @@
               </div>
 
               <div class="producto-reservado">
-                <img :src="reserva.producto.imagen" :alt="reserva.producto.nombre" class="producto-img" />
                 <div class="producto-info">
                   <h4>{{ reserva.producto.nombre }}</h4>
                   <p class="categoria">{{ reserva.producto.categoria }}</p>
@@ -308,10 +306,10 @@
                   </span>
                 </div>
                 <div class="discount-actions-admin">
-                  <button @click="editDiscount(discount)" class="action-btn-admin edit-btn" title="Editar">
+                  <button @click="editDiscount(discount)" class="action-btn-admin discount-edit-btn" title="Editar">
                     Editar
                   </button>
-                  <button @click="deleteDiscount(discount.id)" class="action-btn-admin delete-btn" title="Eliminar">
+                  <button @click="deleteDiscount(discount.id)" class="action-btn-admin discount-delete-btn" title="Eliminar">
                     Borrar
                   </button>
                 </div>
@@ -1601,6 +1599,15 @@ const openDiscountModal = () => {
 
 // Editar descuento
 const editDiscount = (discount: any) => {
+  // Convertir fechas ISO 8601 a formato YYYY-MM-DD para el input date
+  const convertToDateFormat = (dateString: string): string => {
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   discountForm.value = {
     id: discount.id,
     code: discount.code,
@@ -1608,8 +1615,8 @@ const editDiscount = (discount: any) => {
     value: discount.value,
     scope: discount.scope,
     scopeValue: discount.scopeValue || '',
-    startDate: discount.startDate,
-    endDate: discount.endDate
+    startDate: convertToDateFormat(discount.startDate),
+    endDate: convertToDateFormat(discount.endDate)
   }
   showDiscountModal.value = true
 }
@@ -1658,13 +1665,28 @@ const saveDiscount = async () => {
   }
 
   try {
+    const normalizedCode = discountForm.value.code.trim().toUpperCase()
+
+    // Convertir fechas de YYYY-MM-DD a formato LocalDateTime ISO 8601
+    const startDateTime = new Date(discountForm.value.startDate)
+    startDateTime.setHours(0, 0, 0, 0)
+    const endDateTime = new Date(discountForm.value.endDate)
+    endDateTime.setHours(23, 59, 59, 999)
+
+    const payload = {
+      ...discountForm.value,
+      code: normalizedCode,
+      startDate: startDateTime.toISOString(),
+      endDate: endDateTime.toISOString()
+    }
+
     if (discountForm.value.id) {
       // Actualizar
-      await api.put(`/api/discounts/${discountForm.value.id}`, discountForm.value)
+      await api.put(`/api/discounts/${discountForm.value.id}`, payload)
       alert('✅ Código de descuento actualizado correctamente')
     } else {
       // Crear
-      await api.post('/api/discounts', discountForm.value)
+      await api.post('/api/discounts', payload)
       alert('✅ Código de descuento creado correctamente')
     }
     
@@ -1672,7 +1694,8 @@ const saveDiscount = async () => {
     await loadDescuentos()
   } catch (error: any) {
     console.error('Error al guardar descuento:', error)
-    alert('❌ Error al guardar el código de descuento: ' + (error.response?.data?.message || 'Error desconocido'))
+    const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Error desconocido'
+    alert('❌ Error al guardar el código de descuento: ' + errorMsg)
   }
 }
 
@@ -2904,29 +2927,33 @@ const exportProductsToExcel = async () => {
 .discount-actions-admin {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .action-btn-admin {
-  width: 36px;
-  height: 36px;
+  min-height: 36px;
+  padding: 8px 12px;
   border: 2px solid #e5e7eb;
   background: white;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
 .action-btn-admin:hover {
-  transform: scale(1.1);
+  transform: translateY(-1px);
 }
 
-.action-btn-admin.edit-btn:hover {
+.action-btn-admin.discount-edit-btn:hover {
   border-color: #3b82f6;
   background: #eff6ff;
 }
 
-.action-btn-admin.delete-btn:hover {
+.action-btn-admin.discount-delete-btn:hover {
   border-color: #dc2626;
   background: #fef2f2;
 }

@@ -33,11 +33,18 @@ public class CodigoDescuentoService {
     }
 
     public Optional<CodigoDescuento> obtenerPorCodigo(String codigo) {
-        return codigoRepository.findByCode(codigo);
+        if (codigo == null) {
+            return Optional.empty();
+        }
+        String codigoNormalizado = codigo.trim();
+        if (codigoNormalizado.isEmpty()) {
+            return Optional.empty();
+        }
+        return codigoRepository.findByCodeIgnoreCase(codigoNormalizado);
     }
 
     public boolean validarCodigo(String codigo) {
-        Optional<CodigoDescuento> optCodigo = codigoRepository.findByCode(codigo);
+        Optional<CodigoDescuento> optCodigo = obtenerPorCodigo(codigo);
         if (optCodigo.isEmpty()) return false;
         
         CodigoDescuento cd = optCodigo.get();

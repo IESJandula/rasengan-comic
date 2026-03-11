@@ -103,8 +103,15 @@
           </div>
 
           <div class="promo-code">
-            <input v-model="promoCode" placeholder="Código promocional" />
-            <button @click="applyPromo" class="apply-btn">Aplicar</button>
+            <input v-model.trim="promoCode" placeholder="Código promocional" class="promo-code-input" />
+            <button @click="applyPromo" class="apply-btn" :disabled="applyingPromo">
+              {{ applyingPromo ? 'Aplicando...' : 'Aplicar' }}
+            </button>
+          </div>
+
+          <div v-if="appliedDiscountAmount > 0" class="summary-item summary-discount">
+            <span>Descuento ({{ appliedDiscountCode }})</span>
+            <span>-{{ appliedDiscountAmount.toFixed(2) }}€</span>
           </div>
 
           <button 
@@ -171,6 +178,9 @@ const taxes = computed(() => cartStore.taxes)
 const total = computed(() => cartStore.total)
 
 const promoCode = ref('')
+const appliedDiscountAmount = ref(0)
+const appliedDiscountCode = ref('')
+const applyingPromo = ref(false)
 const showAuthModal = ref(false)
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 const deliveryMethod = ref<'envio' | 'tienda'>('envio')
@@ -240,7 +250,7 @@ const calculatedShipping = computed(() => {
 
 // Calcular total con el envío correcto
 const calculatedTotal = computed(() => {
-  return subtotal.value + taxes.value + calculatedShipping.value
+  return Math.max(0, subtotal.value + taxes.value + calculatedShipping.value - appliedDiscountAmount.value)
 })
 
 // Validar si se puede proceder al pago
@@ -272,14 +282,65 @@ const removeItem = (itemId: number) => {
   cartStore.removeItem(itemId)
 }
 
-const applyPromo = () => {
-  if (promoCode.value.toUpperCase() === 'DESCUENTO10') {
-    alert('Código aplicado: 10% de descuento')
-  } else {
-    alert('Código promocional inválido')
+const applyPromo = async () => {
+  const normalizedCode = promoCode.value.trim().toUpperCase()
+
+  if (!normalizedCode) {
+    alert('Introduce un código promocional')
+    return
   }
-  promoCode.value = ''
+
+  if (subtotal.value <= 0) {
+    alert('El carrito está vacío')
+    return
+  }
+
+  applyingPromo.value = true
+
+  try {
+    const response = await api.post('/api/discounts/aplicar', null, {
+      params: {
+        codigo: normalizedCode,
+        precio: subtotal.value
+      }
+    })
+
+    const body = response.data
+    if (!body?.success) {
+      appliedDiscountAmount.value = 0
+      appliedDiscountCode.value = ''
+      alert(body?.message || 'Código promocional inválido')
+      return
+    }
+
+    const discountAmount = Number(body?.data || 0)
+    if (discountAmount <= 0) {
+      appliedDiscountAmount.value = 0
+      appliedDiscountCode.value = ''
+      alert('El código no aplica descuento para este carrito')
+      return
+    }
+
+    appliedDiscountAmount.value = Math.min(discountAmount, subtotal.value + taxes.value + calculatedShipping.value)
+    appliedDiscountCode.value = normalizedCode
+    promoCode.value = normalizedCode
+    alert(`Código aplicado correctamente: ${normalizedCode}`)
+  } catch (err: any) {
+    appliedDiscountAmount.value = 0
+    appliedDiscountCode.value = ''
+    const errorMsg = err.response?.data?.message || 'Código promocional inválido'
+    alert(errorMsg)
+  } finally {
+    applyingPromo.value = false
+  }
 }
+
+watch([subtotal, taxes, calculatedShipping], () => {
+  if (appliedDiscountAmount.value > 0) {
+    appliedDiscountAmount.value = 0
+    appliedDiscountCode.value = ''
+  }
+})
 
 const checkout = async () => {
   console.log('🚀 Iniciando checkout...')
@@ -769,6 +830,15 @@ const closeAuthModal = () => {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   font-size: 13px;
+}
+
+.promo-code-input {
+  text-transform: uppercase;
+}
+
+.summary-discount {
+  color: #10b981;
+  font-weight: 600;
 }
 
 .apply-btn {

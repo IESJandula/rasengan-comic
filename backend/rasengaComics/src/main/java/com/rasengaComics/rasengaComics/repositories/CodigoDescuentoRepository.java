@@ -8,4 +8,5 @@ import java.util.Optional;
 @Repository
 public interface CodigoDescuentoRepository extends JpaRepository<CodigoDescuento, Long> {
     Optional<CodigoDescuento> findByCode(String code);
+    Optional<CodigoDescuento> findByCodeIgnoreCase(String code);
 }
