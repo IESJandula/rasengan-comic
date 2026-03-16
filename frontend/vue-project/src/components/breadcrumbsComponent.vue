@@ -17,8 +17,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import api from '@/api/axios'
 
 type Crumb = {
   label: string
@@ -27,6 +28,34 @@ type Crumb = {
 }
 
 const route = useRoute()
+const currentProductName = ref('')
+
+const loadCurrentProductName = async () => {
+  if (route.name !== 'Producto' || !route.params.id) {
+    currentProductName.value = ''
+    return
+  }
+
+  if (route.meta.productName) {
+    currentProductName.value = String(route.meta.productName)
+    return
+  }
+
+  try {
+    const response = await api.get(`/api/products/${route.params.id}`)
+    currentProductName.value = response.data?.name ? String(response.data.name) : ''
+  } catch {
+    currentProductName.value = ''
+  }
+}
+
+watch(
+  () => [route.name, route.params.id, route.meta.productName],
+  () => {
+    loadCurrentProductName()
+  },
+  { immediate: true }
+)
 
 const labelMap: Record<string, string> = {
   Home: 'Inicio',
@@ -64,7 +93,7 @@ const breadcrumbs = computed<Crumb[]>(() => {
     let label = labelMap[name] || name
 
     if (name === 'Producto' && route.params.id) {
-      label = `Producto ${route.params.id}`
+      label = currentProductName.value || `Producto ${route.params.id}`
     }
 
     crumbs.push({
