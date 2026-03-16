@@ -43,13 +43,13 @@
         <!-- Precio -->
         <div class="price-section">
           <div class="price">
-            <span v-if="product.originalPrice" class="original-price">
-              {{ product.originalPrice }}€
+            <span v-if="priceBeforeDiscount > product.price" class="original-price">
+              {{ priceBeforeDiscount.toFixed(2) }}€
             </span>
             <span class="current-price">{{ product.price }}€</span>
           </div>
-          <div v-if="product.discount" class="save-amount">
-            Ahorras {{ (product.originalPrice! - product.price).toFixed(2) }}€
+          <div v-if="product.discount && priceBeforeDiscount > product.price" class="save-amount">
+            Precio antes del descuento: {{ priceBeforeDiscount.toFixed(2) }}€
           </div>
         </div>
 
@@ -147,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCartStore } from '@/stores/cartStore';
 import { useSeo, seoJsonLd } from '@/composables/useSeo';
@@ -230,6 +230,22 @@ const product = ref<Product>({
   ]
 });
 
+const priceBeforeDiscount = computed(() => {
+  const currentPrice = Number(product.value.price || 0);
+  const originalPrice = Number(product.value.originalPrice || 0);
+  const discount = Number(product.value.discount || 0);
+
+  if (originalPrice > currentPrice) {
+    return originalPrice;
+  }
+
+  if (discount > 0 && discount < 100 && currentPrice > 0) {
+    return currentPrice / (1 - discount / 100);
+  }
+
+  return currentPrice;
+});
+
 // Cargar producto desde la API basado en el ID de la ruta
 const loadProduct = async () => {
   try {
@@ -242,6 +258,9 @@ const loadProduct = async () => {
       ...response.data,
       images: resolveImages(response.data.images, response.data.image)
     };
+
+    // Actualizar miga de pan con el nombre real del producto
+    router.currentRoute.value.meta.productName = product.value.name;
     
     if (product.value.images.length > 0) {
       currentImage.value = product.value.images[0] || currentImage.value;

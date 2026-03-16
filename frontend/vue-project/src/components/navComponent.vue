@@ -38,8 +38,8 @@
         <!-- Opciones de usuario en móvil -->
         <li v-if="authStore.isAuthenticated && authStore.user" class="mobile-user-item">
           <router-link to="/perfil" class="nav-link" @click="closeMenu">👤 Mi Perfil</router-link>
-          <router-link to="/perfil?tab=compras" class="nav-link" @click="closeMenu">🛍️ Mis Compras</router-link>
-          <router-link to="/perfil?tab=reservas" class="nav-link" @click="closeMenu">📅 Mis Reservas</router-link>
+          <button @click="goToProfileTab('compras'); closeMenu()" class="nav-link logout-link">🛍️ Mis Compras</button>
+          <button @click="goToProfileTab('reservas'); closeMenu()" class="nav-link logout-link">📅 Mis Reservas</button>
           <router-link v-if="isAdmin" to="/admin" class="nav-link" @click="closeMenu">⚙️ Admin Panel</router-link>
           <button @click="logout(); closeMenu()" class="nav-link logout-link">🚪 Cerrar Sesión</button>
         </li>
@@ -120,8 +120,8 @@
             </div>
             <router-link to="/perfil" class="dropdown-item">👤 Mi Perfil</router-link>
             <router-link to="/carrito" class="dropdown-item">🛒 Carrito</router-link>
-            <router-link to="/perfil?tab=compras" class="dropdown-item">🛍️ Mis Compras</router-link>
-            <router-link to="/perfil?tab=reservas" class="dropdown-item">📅 Mis Reservas</router-link>
+            <button @click="goToProfileTab('compras')" class="dropdown-item">🛍️ Mis Compras</button>
+            <button @click="goToProfileTab('reservas')" class="dropdown-item">📅 Mis Reservas</button>
             <router-link v-if="isAdmin" to="/admin" class="dropdown-item admin-link">⚙️ Admin Panel</router-link>
             <div class="dropdown-divider"></div>
             <button @click="logout" class="dropdown-item logout">🚪 Cerrar Sesión</button>
@@ -210,6 +210,10 @@ const goToLogin = (): void => {
 const goToRegister = (): void => {
   console.log('Navegando a registro...')
   router.push('/registro')
+}
+
+const goToProfileTab = (tab: 'compras' | 'reservas'): void => {
+  window.location.href = `/perfil?tab=${tab}`
 }
 
 const handleSearch = (): void => {
