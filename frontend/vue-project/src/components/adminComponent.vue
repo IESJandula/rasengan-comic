@@ -1414,7 +1414,7 @@ const marcarPedidoRecogido = async (pedidoId: number): Promise<void> => {
 // Productos
 const showProductForm = ref(false)
 const editingProduct = ref<Product | null>(null)
-const productCategories = ['TCG', 'Manga', 'Comics', 'Figuras', 'Juegos de mesa', 'Accesorios', 'Merchandising']
+const productCategories = ['TCG', 'Manga', 'Comics', 'Figuras', 'Juegos de mesa', 'Accesorios']
 const productSubcategoriesByCategory: Record<string, string[]> = {
   TCG: ['Yu-Gi-Oh', 'Magic', 'Pokemon', 'One Piece', 'Digimon', 'Dragon Ball'],
   Manga: ['Shonen', 'Seinen', 'Shojo', 'Josei', 'Kodomo'],
