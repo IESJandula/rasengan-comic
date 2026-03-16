@@ -129,6 +129,34 @@
         
         <button @click="openProductForm()" class="add-btn">Añadir Producto</button>
 
+        <div class="product-filters-controls">
+          <div class="product-sort-controls">
+            <label for="productSort">Ordenar por:</label>
+            <select id="productSort" v-model="productSortBy">
+              <option value="name-asc">Nombre (A-Z)</option>
+              <option value="name-desc">Nombre (Z-A)</option>
+              <option value="date-desc">Fecha de introducción (más reciente)</option>
+              <option value="date-asc">Fecha de introducción (más antiguo)</option>
+              <option value="price-asc">Precio (menor a mayor)</option>
+              <option value="price-desc">Precio (mayor a menor)</option>
+            </select>
+          </div>
+          <div class="product-sort-controls">
+            <label for="productSubcategoryFilter">Subcategoría:</label>
+            <select id="productSubcategoryFilter" v-model="productSubcategoryFilter">
+              <option value="all">Todas</option>
+              <option value="none">Sin subcategoría</option>
+              <option
+                v-for="sub in availableProductSubcategoryFilters"
+                :key="`subcategory-filter-${sub}`"
+                :value="sub"
+              >
+                {{ sub }}
+              </option>
+            </select>
+          </div>
+        </div>
+
         <!-- Formulario Producto -->
         <div v-if="showProductForm" class="form-modal">
           <div class="form-content">
@@ -169,16 +197,16 @@
                 </select>
               </div>
               <div class="form-group">
-                <label for="productPrice">💰 Precio</label>
+                <label for="productPrice">💰 Precio Base</label>
                 <input id="productPrice" v-model.number="productForm.price" type="number" placeholder="0.00" step="0.01" required />
-              </div>
-              <div class="form-group">
-                <label for="productOriginalPrice">🏷️ Precio Original (opcional)</label>
-                <input id="productOriginalPrice" v-model.number="productForm.originalPrice" type="number" placeholder="0.00" step="0.01" />
               </div>
               <div class="form-group">
                 <label for="productDiscount">📉 Descuento (%)</label>
                 <input id="productDiscount" v-model.number="productForm.discount" type="number" placeholder="0" min="0" max="100" />
+              </div>
+              <div class="form-group">
+                <label>💵 Precio Final</label>
+                <input :value="calculatedFinalPrice.toFixed(2)" type="number" step="0.01" disabled />
               </div>
               <div class="form-group">
                 <label for="productStock">📦 Stock Disponible</label>
@@ -221,10 +249,9 @@
 
         <!-- Lista de Productos -->
         <div class="items-list">
-          <div v-for="product in products" :key="product.id" class="item-card">
+          <div v-for="product in sortedProducts" :key="product.id" class="item-card">
             <div class="item-details">
               <h3>{{ product.name }}</h3>
-              <p> ${{ product.price }}</p>
               <p :class="['stock-indicator', product.stock === 0 ? 'out-of-stock' : product.stock < 10 ? 'low-stock' : 'in-stock']">
                  Stock: {{ product.stock }}
               </p>
@@ -242,6 +269,31 @@
         <h1>Gestión de Eventos</h1>
         
         <button @click="openEventForm()" class="add-btn">Crear Evento</button>
+
+        <div class="event-filters-controls">
+          <div class="product-sort-controls">
+            <label for="eventSort">Ordenar por:</label>
+            <select id="eventSort" v-model="eventSortBy">
+              <option value="date-asc">Fecha (más próxima)</option>
+              <option value="date-desc">Fecha (más lejana)</option>
+              <option value="name-asc">Nombre (A-Z)</option>
+              <option value="name-desc">Nombre (Z-A)</option>
+            </select>
+          </div>
+          <div class="product-sort-controls">
+            <label for="eventMonthFilter">Mes:</label>
+            <select id="eventMonthFilter" v-model="eventMonthFilter">
+              <option value="all">Todos</option>
+              <option
+                v-for="month in eventMonthOptions"
+                :key="`event-month-${month.value}`"
+                :value="month.value"
+              >
+                {{ month.label }}
+              </option>
+            </select>
+          </div>
+        </div>
 
         <!-- Formulario Evento -->
         <div v-if="showEventForm" class="form-modal">
@@ -282,7 +334,7 @@
 
         <!-- Lista de Eventos -->
         <div class="items-list">
-          <div v-for="event in events" :key="event.id" class="item-card">
+          <div v-for="event in filteredAndSortedEvents" :key="event.id" class="item-card">
             <div class="item-details">
               <h3>{{ event.name }}</h3>
               <p>{{ event.date }} - {{ event.time }}</p>
@@ -936,7 +988,9 @@ const loadProductos = async () => {
       id: p.id,
       name: p.name,
       category: p.category,
+      subcategory: p.subcategory || '',
       price: p.price || 0,
+      originalPrice: p.originalPrice || null,
       stock: p.stock || 0,
       discount: p.discount || 0,
       description: p.description || '',
@@ -1359,7 +1413,6 @@ const productForm = ref({
   category: '',
   subcategory: '',
   price: 0,
-  originalPrice: null as number | null,
   discount: 0,
   image: '',
   available: true,
@@ -1368,6 +1421,12 @@ const productForm = ref({
   reviews: 0,
   isReserve: false,
   isNew: false
+})
+
+const calculatedFinalPrice = computed(() => {
+  const basePrice = Number(productForm.value.price) || 0
+  const discount = Math.min(100, Math.max(0, Number(productForm.value.discount) || 0))
+  return Number((basePrice * (1 - discount / 100)).toFixed(2))
 })
 const imagePreview = ref<string | null>(null)
 const uploadingImage = ref(false)
@@ -1383,6 +1442,52 @@ watch(
 )
 
 const products = ref<Product[]>([])
+const productSortBy = ref<'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'price-asc' | 'price-desc'>('date-desc')
+const productSubcategoryFilter = ref<string>('all')
+
+const availableProductSubcategoryFilters = computed(() => {
+  const subcategories = products.value
+    .map((product) => (product.subcategory || '').trim())
+    .filter((subcategory) => subcategory.length > 0)
+
+  return Array.from(new Set(subcategories)).sort((a, b) =>
+    a.localeCompare(b, 'es', { sensitivity: 'base' })
+  )
+})
+
+const filteredProducts = computed(() => {
+  if (productSubcategoryFilter.value === 'all') {
+    return products.value
+  }
+
+  if (productSubcategoryFilter.value === 'none') {
+    return products.value.filter((product) => !(product.subcategory || '').trim())
+  }
+
+  return products.value.filter(
+    (product) => (product.subcategory || '').trim() === productSubcategoryFilter.value
+  )
+})
+
+const sortedProducts = computed(() => {
+  const sorted = [...filteredProducts.value]
+
+  if (productSortBy.value === 'name-asc') {
+    sorted.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+  } else if (productSortBy.value === 'name-desc') {
+    sorted.sort((a, b) => b.name.localeCompare(a.name, 'es', { sensitivity: 'base' }))
+  } else if (productSortBy.value === 'price-asc') {
+    sorted.sort((a, b) => (a.price || 0) - (b.price || 0))
+  } else if (productSortBy.value === 'price-desc') {
+    sorted.sort((a, b) => (b.price || 0) - (a.price || 0))
+  } else if (productSortBy.value === 'date-asc') {
+    sorted.sort((a, b) => (a.id || 0) - (b.id || 0))
+  } else {
+    sorted.sort((a, b) => (b.id || 0) - (a.id || 0))
+  }
+
+  return sorted
+})
 
 // Función para resetear el formulario de productos
 const resetProductForm = (): void => {
@@ -1391,7 +1496,6 @@ const resetProductForm = (): void => {
     category: '',
     subcategory: '',
     price: 0,
-    originalPrice: null,
     discount: 0,
     image: '',
     available: true,
@@ -1429,6 +1533,52 @@ const eventForm = ref<Omit<Event, 'id'>>({
 })
 
 const events = ref<Event[]>([])
+const eventSortBy = ref<'date-asc' | 'date-desc' | 'name-asc' | 'name-desc'>('date-asc')
+const eventMonthFilter = ref<string>('all')
+
+const eventMonthOptions = [
+  { value: '1', label: 'Enero' },
+  { value: '2', label: 'Febrero' },
+  { value: '3', label: 'Marzo' },
+  { value: '4', label: 'Abril' },
+  { value: '5', label: 'Mayo' },
+  { value: '6', label: 'Junio' },
+  { value: '7', label: 'Julio' },
+  { value: '8', label: 'Agosto' },
+  { value: '9', label: 'Septiembre' },
+  { value: '10', label: 'Octubre' },
+  { value: '11', label: 'Noviembre' },
+  { value: '12', label: 'Diciembre' }
+]
+
+const filteredAndSortedEvents = computed(() => {
+  const filtered = events.value.filter((event) => {
+    if (eventMonthFilter.value === 'all') {
+      return true
+    }
+
+    if (!event.date) {
+      return false
+    }
+
+    const eventMonth = new Date(event.date).getMonth() + 1
+    return String(eventMonth) === eventMonthFilter.value
+  })
+
+  const sorted = [...filtered]
+
+  if (eventSortBy.value === 'name-asc') {
+    sorted.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+  } else if (eventSortBy.value === 'name-desc') {
+    sorted.sort((a, b) => b.name.localeCompare(a.name, 'es', { sensitivity: 'base' }))
+  } else if (eventSortBy.value === 'date-desc') {
+    sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  } else {
+    sorted.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  }
+
+  return sorted
+})
 
 // Función para resetear el formulario de eventos
 const resetEventForm = (): void => {
@@ -1474,6 +1624,10 @@ const categories = ['TCG', 'Manga', 'Cómics', 'Merchandising', 'Accesorios']
 // Métodos Productos
 const saveProduct = async (): Promise<void> => {
   try {
+    const basePrice = Number(productForm.value.price) || 0
+    const normalizedDiscount = Math.min(100, Math.max(0, Number(productForm.value.discount) || 0))
+    const finalPrice = Number((basePrice * (1 - normalizedDiscount / 100)).toFixed(2))
+
     // Validaciones
     if (!productForm.value.name?.trim()) {
       alert('⚠️ El nombre del producto es obligatorio')
@@ -1485,8 +1639,13 @@ const saveProduct = async (): Promise<void> => {
       return
     }
     
-    if (!productForm.value.price || productForm.value.price <= 0) {
+    if (!basePrice || basePrice <= 0) {
       alert('⚠️ El precio debe ser mayor a 0')
+      return
+    }
+
+    if (finalPrice <= 0) {
+      alert('⚠️ El precio final debe ser mayor a 0')
       return
     }
     
@@ -1494,17 +1653,24 @@ const saveProduct = async (): Promise<void> => {
       alert('⚠️ Debes subir una imagen del producto')
       return
     }
+
+    const productPayload = {
+      ...productForm.value,
+      discount: normalizedDiscount,
+      originalPrice: normalizedDiscount > 0 ? basePrice : null,
+      price: finalPrice
+    }
     
-    console.log('💾 Guardando producto...', productForm.value)
+    console.log('💾 Guardando producto...', productPayload)
     
     if (editingProduct.value) {
       // Actualizar producto existente
-      await api.put(`/api/products/${editingProduct.value.id}`, productForm.value)
+      await api.put(`/api/products/${editingProduct.value.id}`, productPayload)
       console.log('✅ Producto actualizado')
       alert('✅ Producto actualizado correctamente')
     } else {
       // Crear nuevo producto
-      await api.post('/api/products', productForm.value)
+      await api.post('/api/products', productPayload)
       console.log('✅ Producto creado')
       alert('✅ Producto creado correctamente')
     }
@@ -1518,14 +1684,20 @@ const saveProduct = async (): Promise<void> => {
 }
 
 const editProductHandler = (product: Product): void => {
+  const discount = Math.min(100, Math.max(0, Number(product.discount) || 0))
+  const hasOriginalPrice = typeof product.originalPrice === 'number' && product.originalPrice > 0
+  const computedBasePrice = discount > 0 && product.price > 0
+    ? Number((product.price / (1 - discount / 100)).toFixed(2))
+    : product.price
+  const basePrice = hasOriginalPrice ? Number(product.originalPrice) : computedBasePrice
+
   editingProduct.value = product
   productForm.value = {
     name: product.name,
     category: product.category,
     subcategory: product.subcategory || '',
-    price: product.price,
-    originalPrice: product.originalPrice || null,
-    discount: product.discount || 0,
+    price: basePrice,
+    discount,
     image: product.image,
     available: product.available !== undefined ? product.available : true,
     stock: product.stock || 0,
@@ -2313,6 +2485,35 @@ const exportProductsToExcel = async () => {
 
 .add-btn:hover {
   background-color: #b91c1c;
+}
+
+.product-sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.product-filters-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.event-filters-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.product-sort-controls label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.product-sort-controls select {
+  max-width: 320px;
 }
 
 .form-modal {
