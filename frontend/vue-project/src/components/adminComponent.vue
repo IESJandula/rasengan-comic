@@ -155,6 +155,14 @@
               </option>
             </select>
           </div>
+          <div class="product-sort-controls">
+            <label for="productStatusFilter">Estado:</label>
+            <select id="productStatusFilter" v-model="productStatusFilter">
+              <option value="all">Todos</option>
+              <option value="reserve">En reserva</option>
+              <option value="available">Disponibles</option>
+            </select>
+          </div>
         </div>
 
         <!-- Formulario Producto -->
@@ -214,8 +222,8 @@
               </div>
               
               <div class="checkbox-group">
-                <label><input type="checkbox" v-model="productForm.available" /> ✅ Disponible</label>
-                <label><input type="checkbox" v-model="productForm.isNew" /> 🆕 Producto Nuevo</label>
+                <label><input type="checkbox" v-model="productForm.available" :disabled="productForm.isReserve" /> ✅ Disponible</label>
+                <label><input type="checkbox" v-model="productForm.isNew" :disabled="productForm.isReserve" /> 🆕 Producto Nuevo</label>
                 <label><input type="checkbox" v-model="productForm.isReserve" /> 📅 Es Reserva</label>
               </div>
               
@@ -252,6 +260,11 @@
           <div v-for="product in sortedProducts" :key="product.id" class="item-card">
             <div class="item-details">
               <h3>{{ product.name }}</h3>
+              <div class="product-flags">
+                <span v-if="product.isReserve" class="product-flag reserve">📅 En reserva</span>
+                <span v-else-if="product.available" class="product-flag available">✅ Disponible</span>
+                <span v-if="!product.isReserve && product.isNew" class="product-flag is-new">🆕 Nuevo</span>
+              </div>
               <p :class="['stock-indicator', product.stock === 0 ? 'out-of-stock' : product.stock < 10 ? 'low-stock' : 'in-stock']">
                  Stock: {{ product.stock }}
               </p>
@@ -739,6 +752,7 @@
                   <label><input type="checkbox" v-model="productExportOptions.stock" /> Stock</label>
                   <label><input type="checkbox" v-model="productExportOptions.discount" /> Descuento</label>
                   <label><input type="checkbox" v-model="productExportOptions.available" /> Disponible</label>
+                  <label><input type="checkbox" v-model="productExportOptions.reserve" /> En reserva</label>
                 </div>
               </div>
               <button @click="exportProductsToExcel" class="export-btn">
@@ -985,6 +999,13 @@ const loadProductos = async () => {
   try {
     const response = await api.get('/api/products')
     products.value = response.data.map((p: any) => ({
+      ...(Boolean(p.isReserve)
+        ? { available: false, isNew: false, isReserve: true }
+        : {
+            available: p.available !== undefined ? Boolean(p.available) : true,
+            isNew: Boolean(p.isNew),
+            isReserve: false
+          }),
       id: p.id,
       name: p.name,
       category: p.category,
@@ -1441,9 +1462,20 @@ watch(
   }
 )
 
+watch(
+  () => productForm.value.isReserve,
+  (isReserve) => {
+    if (isReserve) {
+      productForm.value.available = false
+      productForm.value.isNew = false
+    }
+  }
+)
+
 const products = ref<Product[]>([])
 const productSortBy = ref<'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'price-asc' | 'price-desc'>('date-desc')
 const productSubcategoryFilter = ref<string>('all')
+const productStatusFilter = ref<'all' | 'reserve' | 'available'>('all')
 
 const availableProductSubcategoryFilters = computed(() => {
   const subcategories = products.value
@@ -1456,17 +1488,23 @@ const availableProductSubcategoryFilters = computed(() => {
 })
 
 const filteredProducts = computed(() => {
-  if (productSubcategoryFilter.value === 'all') {
-    return products.value
-  }
+  let result = [...products.value]
 
   if (productSubcategoryFilter.value === 'none') {
-    return products.value.filter((product) => !(product.subcategory || '').trim())
+    result = result.filter((product) => !(product.subcategory || '').trim())
+  } else if (productSubcategoryFilter.value !== 'all') {
+    result = result.filter(
+      (product) => (product.subcategory || '').trim() === productSubcategoryFilter.value
+    )
   }
 
-  return products.value.filter(
-    (product) => (product.subcategory || '').trim() === productSubcategoryFilter.value
-  )
+  if (productStatusFilter.value === 'reserve') {
+    result = result.filter((product) => Boolean(product.isReserve))
+  } else if (productStatusFilter.value === 'available') {
+    result = result.filter((product) => !product.isReserve && Boolean(product.available))
+  }
+
+  return result
 })
 
 const sortedProducts = computed(() => {
@@ -1627,6 +1665,13 @@ const saveProduct = async (): Promise<void> => {
     const basePrice = Number(productForm.value.price) || 0
     const normalizedDiscount = Math.min(100, Math.max(0, Number(productForm.value.discount) || 0))
     const finalPrice = Number((basePrice * (1 - normalizedDiscount / 100)).toFixed(2))
+    const normalizedFlags = productForm.value.isReserve
+      ? { available: false, isNew: false, isReserve: true }
+      : {
+          available: Boolean(productForm.value.available),
+          isNew: Boolean(productForm.value.isNew),
+          isReserve: false
+        }
 
     // Validaciones
     if (!productForm.value.name?.trim()) {
@@ -1656,6 +1701,7 @@ const saveProduct = async (): Promise<void> => {
 
     const productPayload = {
       ...productForm.value,
+      ...normalizedFlags,
       discount: normalizedDiscount,
       originalPrice: normalizedDiscount > 0 ? basePrice : null,
       price: finalPrice
@@ -1692,6 +1738,7 @@ const editProductHandler = (product: Product): void => {
   const basePrice = hasOriginalPrice ? Number(product.originalPrice) : computedBasePrice
 
   editingProduct.value = product
+  const isReserve = Boolean(product.isReserve)
   productForm.value = {
     name: product.name,
     category: product.category,
@@ -1699,12 +1746,12 @@ const editProductHandler = (product: Product): void => {
     price: basePrice,
     discount,
     image: product.image,
-    available: product.available !== undefined ? product.available : true,
+    available: isReserve ? false : (product.available !== undefined ? product.available : true),
     stock: product.stock || 0,
     rating: product.rating || 0.0,
     reviews: product.reviews || 0,
-    isReserve: product.isReserve || false,
-    isNew: product.isNew || false
+    isReserve,
+    isNew: isReserve ? false : (product.isNew || false)
   }
   imagePreview.value = product.image || null
   showProductForm.value = true
@@ -1990,7 +2037,8 @@ const productExportOptions = ref({
   price: true,
   stock: true,
   discount: true,
-  available: true
+  available: true,
+  reserve: true
 })
 
 const totalStockValue = computed(() => {
@@ -2011,6 +2059,7 @@ const exportProductsToExcel = async () => {
       if (productExportOptions.value.stock) row['Stock'] = product.stock || 0
       if (productExportOptions.value.discount) row['Descuento (%)'] = product.discount || 0
       if (productExportOptions.value.available) row['Disponible'] = product.available ? 'Sí' : 'No'
+      if (productExportOptions.value.reserve) row['En reserva'] = product.isReserve ? 'Sí' : 'No'
       
       return row
     })
@@ -2777,6 +2826,37 @@ const exportProductsToExcel = async () => {
 .item-details h3 {
   color: #1f2937;
   margin-bottom: 5px;
+}
+
+.product-flags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0 4px;
+}
+
+.product-flag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.product-flag.reserve {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.product-flag.available {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.product-flag.is-new {
+  background-color: #ede9fe;
+  color: #5b21b6;
 }
 
 .item-details p {
