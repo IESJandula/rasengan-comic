@@ -500,7 +500,6 @@ const formatEventDate = (date: Date): string => {
 
 .event-card:hover {
   background-color: #f3f4f6;
-  transform: translateX(5px);
 }
 
 .event-card.tournament {
