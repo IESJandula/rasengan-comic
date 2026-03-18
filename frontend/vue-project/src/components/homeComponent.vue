@@ -2,52 +2,53 @@
   <div class="home-container">
     <!-- Carrusel -->
     <div
-      class="carousel-wrapper"
-      :style="carouselWrapperStyle"
-      @touchstart.passive="onTouchStart"
-      @touchend.passive="onTouchEnd"
-    >
-      <div class="carousel-container">
-        <img
-          v-for="(slide, index) in slides"
-          :key="index"
-          :src="slide"
-          :alt="`Slide ${index + 1}`"
-          @load="updateSlideAspectRatio($event, index)"
-          :class="[
-            'carousel-image',
-            index === currentSlide ? 'active' : ''
-          ]"
-        />
-      </div>
+  class="carousel-wrapper"
+  @touchstart.passive="onTouchStart"
+  @touchend.passive="onTouchEnd"
+>
+  <div class="carousel-container">
 
-      <!-- Botones del carrusel -->
-      <button
-        @click="prevSlide"
-        class="carousel-button carousel-button-left"
-        aria-label="Imagen anterior"
-      >
-        ◄
-      </button>
-      <button
-        @click="nextSlide"
-        class="carousel-button carousel-button-right"
-        aria-label="Siguiente imagen"
-      >
-        ►
-      </button>
+    <!-- Espaciador invisible que da la altura correcta -->
+    <img
+      :src="slides[currentSlide]"
+      class="carousel-image-spacer"
+      aria-hidden="true"
+    />
 
-      <!-- Indicadores -->
-      <div class="carousel-indicators">
-        <button
-          v-for="(_, index) in slides"
-          :key="index"
-          @click="currentSlide = index"
-          :aria-label="`Ir al slide ${index + 1}`"
-          :class="['indicator', index === currentSlide ? 'active' : '']"
-        />
-      </div>
-    </div>
+    <!-- Imágenes reales -->
+    <img
+      v-for="(slide, index) in slides"
+      :key="index"
+      :src="slide"
+      :alt="`Slide ${index + 1}`"
+      :class="['carousel-image', index === currentSlide ? 'active' : '']"
+    />
+
+  </div>
+
+  <button
+    @click="prevSlide"
+    class="carousel-button carousel-button-left"
+    aria-label="Imagen anterior"
+  >◄</button>
+
+  <button
+    @click="nextSlide"
+    class="carousel-button carousel-button-right"
+    aria-label="Siguiente imagen"
+  >►</button>
+
+  <div class="carousel-indicators">
+    <button
+      v-for="(_, index) in slides"
+      :key="index"
+      @click="currentSlide = index"
+      :aria-label="`Ir al slide ${index + 1}`"
+      :class="['indicator', index === currentSlide ? 'active' : '']"
+    ></button>
+  </div>
+
+</div>
 
     <!-- Secciones -->
     <div class="content-wrapper">
@@ -983,7 +984,7 @@ onBeforeUnmount(() => {
 }
 
 /* Carrusel */
-.carousel-wrapper {
+/* .carousel-wrapper {
   position: relative;
   width: 100%;
   max-height: 700px;
@@ -1009,6 +1010,41 @@ onBeforeUnmount(() => {
   height: 100%;
   object-fit: contain;
   object-position: center;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+}
+
+.carousel-image.active {
+  opacity: 1;
+  z-index: 1;
+} */
+
+.carousel-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+.carousel-container {
+  position: relative;
+  width: 100%;
+}
+
+.carousel-image-spacer {
+  width: 100%;
+  height: auto;
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.carousel-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
   opacity: 0;
   transition: opacity 0.8s ease-in-out;
 }
