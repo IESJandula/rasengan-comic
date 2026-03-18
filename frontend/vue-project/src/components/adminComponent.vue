@@ -696,8 +696,8 @@
 
             <div class="carousel-admin-preview-wrap">
               <img
-                v-if="slide"
-                :src="slide"
+                v-if="getCarouselSlidePreview(index)"
+                :src="getCarouselSlidePreview(index)"
                 :alt="`Slide ${index + 1}`"
                 class="carousel-admin-preview"
               />
@@ -711,6 +711,9 @@
                 @change="handleCarouselImageUpload($event, index)"
                 :disabled="carouselUploadingIndex === index"
               />
+              <p v-if="carouselSelectedFileNames[index]" class="carousel-selected-file">
+                Archivo seleccionado: {{ carouselSelectedFileNames[index] }}
+              </p>
               <button
                 type="button"
                 class="btn-cancel"
@@ -962,8 +965,22 @@ const reservasActivas = computed(() => {
 
 const enviosAdmin = ref<EnvioAdmin[]>([])
 const carouselSlides = ref<string[]>(['', '', ''])
+const carouselPendingPreview = ref<string[]>(['', '', ''])
+const carouselSelectedFileNames = ref<string[]>(['', '', ''])
 const carouselUploadingIndex = ref<number | null>(null)
 const estadosFinalizadosEnvio = ['CANCELADO', 'ENTREGADO', 'RECOGIDO', 'COMPLETADO']
+
+const clearCarouselPendingPreview = (index: number): void => {
+  const preview = carouselPendingPreview.value[index]
+  if (preview && preview.startsWith('blob:')) {
+    URL.revokeObjectURL(preview)
+  }
+  carouselPendingPreview.value[index] = ''
+}
+
+const getCarouselSlidePreview = (index: number): string => {
+  return carouselPendingPreview.value[index] || carouselSlides.value[index] || ''
+}
 
 const enviosDomicilioAdmin = computed(() => {
   return enviosAdmin.value.filter((envio) => envio.tipoEntrega === 'domicilio')
@@ -1204,7 +1221,7 @@ const loadCarouselConfig = async (): Promise<void> => {
     }
     carouselSlides.value = defaults.map((_, idx) => {
       const value = apiSlides[idx]
-      return typeof value === 'string' ? value : ''
+      return typeof value === 'string' ? resolveBackendImageUrl(value) : ''
     })
   } catch (error) {
     console.error('Error al cargar la configuracion del carrusel:', error)
@@ -1220,10 +1237,11 @@ const saveCarouselConfig = async (): Promise<void> => {
     if (Array.isArray(apiSlides)) {
       carouselSlides.value = ['', '', ''].map((_, idx) => {
         const value = apiSlides[idx]
-        return typeof value === 'string' ? value : ''
+        return typeof value === 'string' ? resolveBackendImageUrl(value) : ''
       })
     }
     alert('Carrusel de home actualizado correctamente')
+    window.location.reload()
   } catch (error) {
     console.error('Error al guardar configuracion del carrusel:', error)
     alert('No se pudo guardar la configuracion del carrusel')
@@ -1231,6 +1249,8 @@ const saveCarouselConfig = async (): Promise<void> => {
 }
 
 const clearCarouselSlide = (index: number): void => {
+  clearCarouselPendingPreview(index)
+  carouselSelectedFileNames.value[index] = ''
   carouselSlides.value[index] = ''
 }
 
@@ -1254,6 +1274,10 @@ const handleCarouselImageUpload = async (event: any, index: number): Promise<voi
     return
   }
 
+  clearCarouselPendingPreview(index)
+  carouselPendingPreview.value[index] = URL.createObjectURL(file)
+  carouselSelectedFileNames.value[index] = file.name
+
   const formData = new FormData()
   formData.append('file', file)
   carouselUploadingIndex.value = index
@@ -1264,13 +1288,13 @@ const handleCarouselImageUpload = async (event: any, index: number): Promise<voi
       throw new Error('No se recibio URL de imagen')
     }
     carouselSlides.value[index] = resolveBackendImageUrl(response.data.url)
+    clearCarouselPendingPreview(index)
   } catch (error: any) {
     console.error('Error al subir imagen del carrusel:', error)
     const errorMsg = error.response?.data?.message || error.message || 'Error desconocido'
     alert(`No se pudo subir la imagen: ${errorMsg}`)
   } finally {
     carouselUploadingIndex.value = null
-    input.value = ''
   }
 }
 
