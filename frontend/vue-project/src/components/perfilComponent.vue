@@ -700,6 +700,11 @@ const loadCompras = async () => {
         }
       })
       .filter((pedido: any) => pedido.items.length > 0)
+      .sort((a: any, b: any) => {
+        const tA = a?.fechaPedido ? new Date(a.fechaPedido).getTime() : 0
+        const tB = b?.fechaPedido ? new Date(b.fechaPedido).getTime() : 0
+        return tB - tA
+      })
   } catch (err) {
     console.error('Error al cargar compras:', err)
     comprasError.value = 'No se pudieron cargar las compras'
