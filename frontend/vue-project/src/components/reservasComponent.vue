@@ -296,6 +296,11 @@ const loadReservas = async () => {
     })
 
     reservas.value = reservasDesdePedidos
+      .sort((a: any, b: any) => {
+        const tA = a?.fechaReserva ? new Date(a.fechaReserva).getTime() : 0
+        const tB = b?.fechaReserva ? new Date(b.fechaReserva).getTime() : 0
+        return tB - tA
+      })
     console.log('✅ Reservas de productos cargadas:', reservas.value.length)
     updateTimers()
   } catch (err) {
