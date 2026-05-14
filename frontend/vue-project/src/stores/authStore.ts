@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await signInWithEmailAndPassword(auth, email, password)
       user.value = {
         email: res.user.email,
-        name: res.user.email?.split('@')[0] ?? '',
+        name: res.user.displayName || (res.user.email?.split('@')[0] ?? ''),
         uid: res.user.uid
       }
       isAuthenticated.value = true
@@ -65,9 +65,18 @@ export const useAuthStore = defineStore('auth', () => {
   const register = async (fullname: string, email: string, password: string) => {
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password)
+      
+      // Actualizar el displayName en Firebase para no perder el nombre
+      try {
+        const { updateProfile } = await import('firebase/auth')
+        await updateProfile(res.user, { displayName: fullname })
+      } catch (e) {
+        console.error('No se pudo actualizar el displayName en el registro:', e)
+      }
+
       user.value = {
         email: res.user.email,
-        name: fullname ?? (res.user.email?.split('@')[0] ?? ''),
+        name: fullname || (res.user.email?.split('@')[0] ?? ''),
         uid: res.user.uid
       }
       isAuthenticated.value = true
@@ -89,7 +98,8 @@ export const useAuthStore = defineStore('auth', () => {
       if (firebaseUser) {
         user.value = {
           email: firebaseUser.email,
-          name: firebaseUser.email?.split('@')[0] ?? '',
+          name: firebaseUser.displayName || (firebaseUser.email?.split('@')[0] ?? ''),
+          avatar: firebaseUser.photoURL || '',
           uid: firebaseUser.uid
         }
         isAuthenticated.value = true
