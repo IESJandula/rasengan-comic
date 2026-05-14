@@ -330,6 +330,10 @@
                 <textarea id="eventDescription" v-model="eventForm.description" placeholder="Describe el evento con detalle..."></textarea>
               </div>
               <div class="form-group">
+                <label for="eventLocation">📍 Ubicación</label>
+                <input id="eventLocation" v-model="eventForm.location" placeholder="Ej: Sala Principal" required />
+              </div>
+              <div class="form-group">
                 <label for="eventType">🎪 Tipo de Evento</label>
                 <select id="eventType" v-model="eventForm.type">
                   <option value="tournament">🏆 Torneo</option>
@@ -831,6 +835,7 @@ interface Event {
   date: string
   time: string
   description: string
+  location: string
   type: 'tournament' | 'workshop' | 'special'
 }
 
@@ -1053,6 +1058,7 @@ const loadEventos = async () => {
       date: e.fecha ? new Date(e.fecha).toISOString().split('T')[0] : '',
       time: e.fecha ? new Date(e.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '',
       description: e.descripcion || '',
+      location: e.ubicacion || '',
       type: e.tipo || 'tournament'
     }))
     console.log('✅ Eventos cargados:', events.value.length)
@@ -1591,6 +1597,7 @@ const eventForm = ref<Omit<Event, 'id'>>({
   date: '', 
   time: '', 
   description: '', 
+  location: '',
   type: 'tournament' 
 })
 
@@ -1649,6 +1656,7 @@ const resetEventForm = (): void => {
     date: '', 
     time: '', 
     description: '', 
+    location: '',
     type: 'tournament' 
   }
   editingEvent.value = null
@@ -1849,6 +1857,7 @@ const saveEvent = async (): Promise<void> => {
         nombre: eventForm.value.name,
         fecha: eventForm.value.date + 'T' + eventForm.value.time,
         descripcion: eventForm.value.description,
+        ubicacion: eventForm.value.location,
         tipo: eventForm.value.type
       }
       await api.put(`/eventos/${editingEvent.value.id}`, eventoData)
@@ -1859,6 +1868,7 @@ const saveEvent = async (): Promise<void> => {
         nombre: eventForm.value.name,
         fecha: eventForm.value.date + 'T' + eventForm.value.time,
         descripcion: eventForm.value.description,
+        ubicacion: eventForm.value.location,
         tipo: eventForm.value.type
       }
       await api.post('/eventos', eventoData)
