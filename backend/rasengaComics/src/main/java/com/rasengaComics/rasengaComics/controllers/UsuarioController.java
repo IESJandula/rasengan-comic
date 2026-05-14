@@ -49,11 +49,26 @@ public class UsuarioController {
         try {
             String nombre = body.get("nombre");
             String email = body.get("email");
+            String telefono = body.get("telefono");
+            
             Usuario actualizado = usuarioService.actualizarPerfil(uid, nombre, email);
             if (actualizado != null) {
+                if (telefono != null && !telefono.isEmpty()) {
+                    actualizado.setTelefono(telefono);
+                    actualizado = usuarioService.guardar(actualizado);
+                }
                 return ResponseEntity.ok(usuarioService.toResponse(actualizado));
             }
-            return ResponseEntity.notFound().build();
+
+            // Si no existe, crear el usuario (sincronizar con Firebase)
+            Usuario nuevo = new Usuario();
+            nuevo.setUid(uid);
+            nuevo.setNombre(nombre);
+            nuevo.setEmail(email);
+            nuevo.setTelefono(telefono);
+            nuevo.setRol("USER");
+            Usuario creado = usuarioService.guardar(nuevo);
+            return ResponseEntity.status(201).body(usuarioService.toResponse(creado));
         } catch (Exception e) {
             return ResponseEntity.status(400).body(new ApiResponse(false, e.getMessage(), null));
         }

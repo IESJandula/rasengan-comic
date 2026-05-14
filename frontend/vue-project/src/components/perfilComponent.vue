@@ -231,6 +231,7 @@
               <label>Calle</label>
               <input v-model="addressForm.street" type="text" placeholder="Calle Principal 123" />
             </div>
+            <!-- Teléfono eliminado del formulario de dirección -->
             <div class="form-group">
               <label>Ciudad</label>
               <input v-model="addressForm.city" type="text" placeholder="Madrid" />
@@ -260,7 +261,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useCartStore } from '@/stores/cartStore'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
-import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth'
+import { onAuthStateChanged, updatePassword, reauthenticateWithCredential, EmailAuthProvider, updateProfile } from 'firebase/auth'
 import { auth } from '@/firebase'
 import ReservasComponent from '@/components/reservasComponent.vue'
 
@@ -315,7 +316,7 @@ type PersistedProfile = {
 }
 
 const getProfileStorageKey = () => {
-  const identity = authStore.user?.uid || authStore.user?.email
+  const identity = authStore.user?.uid || authStore.user?.email || auth.currentUser?.uid || auth.currentUser?.email
   return identity ? `rasenga_profile_${identity}` : null
 }
 
@@ -360,42 +361,54 @@ const loadProfileFromStorage = () => {
   }
 }
 
-// Cargar perfil del usuario desde el backend
+// Cargar perfil del usuario desde Firebase Y Backend
 const loadUserProfile = async () => {
-  if (!authStore.user?.uid) return
-  
+  const firebaseUser = auth.currentUser
+  const nameFromStore = authStore.user?.name
+  if (!firebaseUser && !nameFromStore) return
+
+  user.value = {
+    ...user.value,
+    name: nameFromStore || firebaseUser?.displayName || 'Usuario',
+    email: firebaseUser?.email || authStore.user?.email || user.value.email,
+    avatar: firebaseUser?.photoURL || authStore.user?.avatar || '',
+    phone: user.value.phone,
+    address: { ...user.value.address }
+  }
+
+  // Cargar dirección/teléfono desde localStorage como respaldo temporal
+  loadProfileFromStorage()
+
+  // Cargar datos oficiales del Backend
   try {
-    const response = await api.get(`/usuarios/${authStore.user.uid}`)
-    const userData = response.data
-    
-    // Actualizar datos del usuario con los del backend
-    if (userData) {
-      user.value = {
-        ...user.value,
-        name: userData.nombre || user.value.name,
-        email: userData.email || user.value.email,
-        phone: userData.telefono || user.value.phone,
-        address: {
-          street: userData.calle || '',
-          city: userData.ciudad || '',
-          zipCode: userData.codigoPostal || '',
-          country: userData.pais || ''
+    const uidForRequest = authStore.user?.uid || firebaseUser?.uid
+    if (uidForRequest) {
+      const response = await api.get(`/usuarios/${uidForRequest}`)
+      if (response.data) {
+        if (response.data.nombre) user.value.name = response.data.nombre
+        if (response.data.telefono) user.value.phone = response.data.telefono
+        
+        if (response.data.direccion) {
+          user.value.address = {
+            street: response.data.direccion.calle || '',
+            city: response.data.direccion.ciudad || '',
+            zipCode: response.data.direccion.codigoPostal || '',
+            country: response.data.direccion.pais || 'España'
+          }
         }
       }
-      
-      // Actualizar authStore
-      if (authStore.user) {
-        authStore.user.name = user.value.name
-      }
-      
-      // También guardar en localStorage como fallback
-      saveProfileToStorage()
     }
-  } catch (error) {
-    console.error('Error al cargar perfil del backend:', error)
-    // Si falla, intentar cargar desde localStorage
-    loadProfileFromStorage()
+  } catch (err) {
+    console.debug('Usuario aún no en backend (se creará al guardar perfil).', err)
   }
+
+  if (authStore.user) {
+    authStore.user.name = user.value.name
+  }
+
+  editForm.value.name = user.value.name
+  editForm.value.phone = user.value.phone
+  addressForm.value = { ...user.value.address }
 }
 
 // Estados de modales
@@ -444,32 +457,33 @@ const getInitials = (name: string) => {
 
 // Guardar perfil
 const saveProfile = async () => {
-  if (!authStore.user?.uid) {
-    alert('❌ Error: No se pudo identificar al usuario')
-    return
-  }
-  
   try {
-    // Actualizar nombre en el endpoint de perfil
-    await api.put(`/usuarios/${authStore.user.uid}`, {
-      nombre: editForm.value.name,
-      email: user.value.email
-    })
-    
-    // Actualizar teléfono en el endpoint de dirección
-    await api.put(`/usuarios/${authStore.user.uid}/direccion`, {
-      telefono: editForm.value.phone,
-      calle: user.value.address.street,
-      ciudad: user.value.address.city,
-      codigoPostal: user.value.address.zipCode,
-      pais: user.value.address.country
-    })
-    
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, {
+        displayName: editForm.value.name
+      })
+    }
+
+    // Intentar actualizar en el backend si tenemos uid (fallback a firebase)
+    const uidForRequest = authStore.user?.uid || auth.currentUser?.uid
+    if (uidForRequest) {
+      try {
+        await api.put(`/usuarios/${uidForRequest}`, {
+          nombre: editForm.value.name,
+          email: user.value.email,
+          telefono: editForm.value.phone
+        })
+      } catch (err) {
+        console.warn('No se pudo actualizar perfil en backend:', err)
+      }
+    }
+
     // Actualizar localmente
     user.value.name = editForm.value.name
     user.value.phone = editForm.value.phone
     if (authStore.user) {
       authStore.user.name = user.value.name
+      ;(authStore.user as any).phone = user.value.phone
     }
     saveProfileToStorage()
     showEditProfileModal.value = false
@@ -493,15 +507,36 @@ const editAddress = () => {
 
 // Guardar dirección
 const saveAddress = async () => {
-  if (!authStore.user?.uid) {
+  const uidForRequest = authStore.user?.uid || auth.currentUser?.uid
+  if (!uidForRequest) {
     alert('❌ Error: No se pudo identificar al usuario')
     return
   }
   
   try {
-    // Actualizar en el backend
-    await api.put(`/usuarios/${authStore.user.uid}/direccion`, {
-      telefono: user.value.phone,
+    // Verificar que el usuario exista en el backend antes de actualizar su dirección
+    try {
+      await api.get(`/usuarios/${uidForRequest}`)
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        console.debug('Usuario no existe en backend. Procediendo a sincronizar/crear...')
+        try {
+          // Si no existe, lo creamos/sincronizamos forzosamente con PUT
+          await api.put(`/usuarios/${uidForRequest}`, {
+            nombre: user.value.name || 'Usuario',
+            telefono: user.value.phone || ''
+          })
+        } catch (syncErr) {
+          console.error('Error al sincronizar el usuario en el backend:', syncErr)
+          alert('❌ No se pudo registrar tu usuario en el sistema. Inténtalo de nuevo.')
+          return
+        }
+      }
+    }
+
+    // Actualizar en el backend (sin teléfono en la dirección)
+    console.debug('PUT /usuarios/' + uidForRequest + '/direccion', addressForm.value)
+    await api.put(`/usuarios/${uidForRequest}/direccion`, {
       calle: addressForm.value.street,
       ciudad: addressForm.value.city,
       codigoPostal: addressForm.value.zipCode,
@@ -509,7 +544,12 @@ const saveAddress = async () => {
     })
     
     // Actualizar localmente
-    user.value.address = { ...addressForm.value }
+    user.value.address = {
+      street: addressForm.value.street,
+      city: addressForm.value.city,
+      zipCode: addressForm.value.zipCode,
+      country: addressForm.value.country
+    }
     saveProfileToStorage()
     showEditAddressModal.value = false
     alert('✓ Dirección actualizada correctamente')
@@ -670,7 +710,8 @@ const confirmarSesionStripePendiente = async () => {
 
 // Cargar compras
 const loadCompras = async () => {
-  if (!authStore.user?.uid) {
+  const uidForRequest = authStore.user?.uid || auth.currentUser?.uid
+  if (!uidForRequest) {
     return
   }
 
@@ -678,7 +719,7 @@ const loadCompras = async () => {
   comprasError.value = ''
 
   try {
-    const response = await api.get(`/pedidos/usuario/${authStore.user.uid}`)
+    const response = await api.get(`/pedidos/usuario/${uidForRequest}`)
     const pedidos = Array.isArray(response.data) ? response.data : []
 
     compras.value = pedidos
@@ -731,51 +772,51 @@ const initTabFromQuery = () => {
 // Mostrar mensaje de éxito después de pago
 const showSuccessMessage = ref(false)
 
-onMounted(async () => {
-  if (authStore.user?.name) {
-    user.value.name = authStore.user.name
-    editForm.value.name = authStore.user.name
-  }
+onMounted(() => {
+  // Esperar a que Firebase restaure la sesión
+  const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    unsubscribe()
 
-  // Cargar perfil desde el backend (con fallback a localStorage)
-  await loadUserProfile()
-  
-  editForm.value.name = user.value.name
-  editForm.value.phone = user.value.phone
-  addressForm.value = { ...user.value.address }
+    const nameFromStore = authStore.user?.name
+    if (!firebaseUser && !nameFromStore) return
 
-  initTabFromQuery()
-  
-  // Si viene de un pago exitoso
-  if (route.query.checkout === 'success') {
-    cartStore.clearCart()
-    activeTab.value = 'Mis compras'
-    showSuccessMessage.value = true
-
-    await confirmarSesionStripePendiente()
-    
-    // Esperar un poco para que el webhook procese el pedido
-    setTimeout(async () => {
-      await loadCompras()
-    }, 2000)
-    
-    // Ocultar mensaje después de 5 segundos
-    setTimeout(() => {
-      showSuccessMessage.value = false
-      // Limpiar el parámetro de la URL
-      router.replace({ query: { tab: 'compras' } })
-    }, 5000)
-  } else if (activeTab.value === 'Mis compras') {
-    loadCompras()
-  }
-
-  // Fallback: si hay una sesión pendiente guardada, intentar confirmarla siempre
-  if (localStorage.getItem('pendingStripeSessionId')) {
-    await confirmarSesionStripePendiente()
-    if (activeTab.value === 'Mis compras') {
-      await loadCompras()
+    user.value = {
+      ...user.value,
+      name: nameFromStore || firebaseUser?.displayName || 'Usuario',
+      email: firebaseUser?.email || authStore.user?.email || user.value.email,
+      avatar: firebaseUser?.photoURL || authStore.user?.avatar || ''
     }
-  }
+
+    if (authStore.user && !authStore.user.name) {
+      authStore.user.name = user.value.name
+    }
+
+    editForm.value.name = user.value.name
+    editForm.value.phone = user.value.phone
+
+    loadProfileFromStorage() // sobreescribe phone/address si hay algo guardado
+
+    initTabFromQuery()
+
+    if (route.query.checkout === 'success') {
+      cartStore.clearCart()
+      activeTab.value = 'Mis compras'
+      showSuccessMessage.value = true
+      await confirmarSesionStripePendiente()
+      setTimeout(async () => { await loadCompras() }, 2000)
+      setTimeout(() => {
+        showSuccessMessage.value = false
+        router.replace({ query: { tab: 'compras' } })
+      }, 5000)
+    } else if (activeTab.value === 'Mis compras') {
+      loadCompras()
+    }
+
+    if (localStorage.getItem('pendingStripeSessionId')) {
+      await confirmarSesionStripePendiente()
+      if (activeTab.value === 'Mis compras') await loadCompras()
+    }
+  })
 })
 
 watch(
