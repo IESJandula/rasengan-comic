@@ -753,6 +753,17 @@ const closeAuthModal = () => {
   font-weight: 600;
 }
 
+/* Ocultar flechas del input number */
+.col-quantity input::-webkit-outer-spin-button,
+.col-quantity input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.col-quantity input[type="number"] {
+  appearance: textfield;
+}
+
 .col-action {
   text-align: center;
 }

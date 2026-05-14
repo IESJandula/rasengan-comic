@@ -589,6 +589,17 @@ const viewProduct = (productId: number) => {
   font-weight: bold;
 }
 
+/* Ocultar flechas del input number */
+#quantity::-webkit-outer-spin-button,
+#quantity::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#quantity[type="number"] {
+  appearance: textfield;
+}
+
 .add-to-cart-btn {
   padding: 15px;
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
