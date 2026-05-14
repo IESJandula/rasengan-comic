@@ -372,6 +372,7 @@ const loadUserProfile = async () => {
     name: nameFromStore || firebaseUser?.displayName || 'Usuario',
     email: firebaseUser?.email || authStore.user?.email || user.value.email,
     avatar: firebaseUser?.photoURL || authStore.user?.avatar || '',
+    joinDate: firebaseUser?.metadata?.creationTime ? formatDate(firebaseUser.metadata.creationTime) : user.value.joinDate,
     phone: user.value.phone,
     address: { ...user.value.address }
   }
@@ -784,7 +785,8 @@ onMounted(() => {
       ...user.value,
       name: nameFromStore || firebaseUser?.displayName || 'Usuario',
       email: firebaseUser?.email || authStore.user?.email || user.value.email,
-      avatar: firebaseUser?.photoURL || authStore.user?.avatar || ''
+      avatar: firebaseUser?.photoURL || authStore.user?.avatar || '',
+      joinDate: firebaseUser?.metadata?.creationTime ? formatDate(firebaseUser.metadata.creationTime) : user.value.joinDate
     }
 
     if (authStore.user && !authStore.user.name) {
