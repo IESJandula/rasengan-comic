@@ -75,7 +75,6 @@
         <!-- Enlaces -->
         <div class="login-links">
           <a href="#" @click.prevent="goToRegister" class="link">¿No tienes cuenta? Regístrate</a>
-          <a href="#" class="link">¿Olvidaste tu contraseña?</a>
         </div>
 
       </div>
@@ -410,7 +409,7 @@ const goToRegister = () => {
 
 .login-links {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   margin: 24px auto 0;
   gap: 10px;
   flex-wrap: wrap;
@@ -422,13 +421,16 @@ const goToRegister = () => {
   color: #dc2626;
   text-decoration: none;
   font-size: 14px;
-  transition: color 0.3s ease;
+  font-weight: 600;
+  transition: all 0.3s ease;
   cursor: pointer;
+  padding: 8px 0;
+  border-bottom: 2px solid transparent;
 }
 
 .link:hover {
   color: #b91c1c;
-  text-decoration: underline;
+  border-bottom-color: #dc2626;
 }
 
 .login-image {
