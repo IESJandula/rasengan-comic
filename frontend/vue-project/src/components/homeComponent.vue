@@ -516,7 +516,7 @@ const mapToHomeItem = (product: any) => ({
 
 const setCategoryItems = (categoryKeys: string[], target: { value: any[] }) => {
   const items = allProducts.value
-    .filter((p: any) => categoryKeys.some((k) => normalizeText(p.category).includes(k)))
+    .filter((p: any) => !p.isReserve && categoryKeys.some((k) => normalizeText(p.category).includes(k)))
     .slice(0, 3)
     .map(mapToHomeItem)
 
@@ -533,14 +533,17 @@ const loadProductosMasComprados = async () => {
       ...p,
       image: resolveImageUrl(p.image) || p.image
     }))
-    // Tomar los primeros 3 productos
-    productosMasComprados.value = allProducts.value.slice(0, 3).map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      category: p.category,
-      price: p.price,
-      image: p.image || 'https://via.placeholder.com/200'
-    }))
+    // Tomar los primeros 3 productos (excluyendo productos de reserva)
+    productosMasComprados.value = allProducts.value
+      .filter((p: any) => !p.isReserve)
+      .slice(0, 3)
+      .map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        price: p.price,
+        image: p.image || 'https://via.placeholder.com/200'
+      }))
 
     setCategoryItems(['juegos', 'mesa'], ultimosJuegosMesa)
     setCategoryItems(['tcg'], ultimosTCG)
